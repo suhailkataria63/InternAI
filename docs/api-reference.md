@@ -287,6 +287,71 @@ Success status code: `200 OK`
 
 Validation error status code: `422 Unprocessable Entity`
 
+## Cover Letter Generation
+
+### `POST /api/cover-letter/generate`
+
+Generates a customized internship cover letter using resume, job, match, and skill-gap context. This endpoint works without an external LLM API key.
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/cover-letter/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_profile": {
+      "name": "Jane Doe",
+      "education": ["B.S. Computer Science"],
+      "skills": ["Python", "FastAPI", "React"],
+      "projects": [
+        {
+          "name": "Hybrid Phishing Detection System",
+          "description": "Detected phishing URLs with machine learning and a React dashboard",
+          "technologies": ["Python", "Machine Learning", "React"]
+        }
+      ],
+      "experience": ["Open source backend documentation contributor"]
+    },
+    "job_profile": {
+      "role_title": "Software Engineering Intern",
+      "company_name": "Acme Labs",
+      "responsibilities": ["Build backend APIs", "Write SQL queries"]
+    },
+    "match_result": {
+      "match_level": "Strong Fit",
+      "matched_skills": ["Python", "FastAPI", "React"],
+      "missing_skills": ["SQL", "Docker"]
+    },
+    "skill_gap_result": {
+      "priority_skills": [{"skill": "SQL"}, {"skill": "Docker"}]
+    },
+    "tone": "professional",
+    "length": "short"
+  }'
+```
+
+Example response:
+
+```json
+{
+  "cover_letter": "Dear Hiring Team,\n\nI am interested in the Software Engineering Intern role at Acme Labs...",
+  "subject_line": "Application for Software Engineering Intern at Acme Labs",
+  "opening_summary": "Candidate with education in B.S. Computer Science applying for Software Engineering Intern.",
+  "key_points_used": [
+    "Target role: Software Engineering Intern",
+    "Company: Acme Labs",
+    "Education: B.S. Computer Science",
+    "Matched skills: Python, FastAPI, React"
+  ],
+  "tone": "professional",
+  "word_count": 128
+}
+```
+
+Success status code: `200 OK`
+
+Validation error status code: `422 Unprocessable Entity`
+
 ## Match Scoring
 
 ### `POST /api/match/score`

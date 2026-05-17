@@ -23,6 +23,7 @@ InternAI will provide a guided assistant that organizes the internship process i
 - Match Scoring Agent that compares resume and job profiles to calculate an internship fit score.
 - Skill Gap Agent that turns missing skills into a practical learning roadmap, resume suggestions, and mini-project ideas.
 - Application Writer Agent that drafts customized internship application answers without requiring an external LLM API key.
+- Cover Letter Agent that generates customized internship cover letters without requiring an external LLM API key.
 
 ## Tech Stack
 
@@ -41,6 +42,7 @@ InternAI will eventually use specialized agents that collaborate around the user
 - Match Scoring Agent: Compares parsed resume and job profiles to explain fit, matched skills, and missing skills.
 - Skill Gap Agent: Converts match gaps into prioritized learning actions and resume improvements.
 - Application Writer Agent: Generates tailored application answers from resume, job, match, and skill-gap context.
+- Cover Letter Agent: Generates role-specific cover letters from the same grounded application context.
 - Opportunity Agent: Finds and ranks internship opportunities.
 - Resume Agent: Helps tailor resumes and application materials.
 - Application Agent: Tracks applications, deadlines, and next steps.
@@ -433,6 +435,70 @@ Processing: the current implementation detects the question type, selects a temp
 
 Output: the original question, generated answer, key points used, tone, word count, and an improvement note.
 
+Generate a customized cover letter:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/cover-letter/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_profile": {
+      "name": "Jane Doe",
+      "education": ["B.S. Computer Science"],
+      "skills": ["Python", "FastAPI", "React"],
+      "projects": [
+        {
+          "name": "Hybrid Phishing Detection System",
+          "description": "Detected phishing URLs with machine learning and a React dashboard",
+          "technologies": ["Python", "Machine Learning", "React"]
+        }
+      ],
+      "experience": ["Open source backend documentation contributor"]
+    },
+    "job_profile": {
+      "role_title": "Software Engineering Intern",
+      "company_name": "Acme Labs",
+      "responsibilities": ["Build backend APIs", "Write SQL queries"]
+    },
+    "match_result": {
+      "match_level": "Strong Fit",
+      "matched_skills": ["Python", "FastAPI", "React"],
+      "missing_skills": ["SQL", "Docker"]
+    },
+    "skill_gap_result": {
+      "priority_skills": [{"skill": "SQL"}, {"skill": "Docker"}]
+    },
+    "tone": "professional",
+    "length": "short"
+  }'
+```
+
+Expected response shape:
+
+```json
+{
+  "cover_letter": "Dear Hiring Team,\n\nI am interested in the Software Engineering Intern role at Acme Labs...",
+  "subject_line": "Application for Software Engineering Intern at Acme Labs",
+  "opening_summary": "Candidate with education in B.S. Computer Science applying for Software Engineering Intern.",
+  "key_points_used": [
+    "Target role: Software Engineering Intern",
+    "Company: Acme Labs",
+    "Education: B.S. Computer Science"
+  ],
+  "tone": "professional",
+  "word_count": 128
+}
+```
+
+## Cover Letter Agent
+
+The Cover Letter Agent generates a customized internship cover letter using the parsed resume profile, parsed job profile, match result, and skill gap result.
+
+Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, optional `tone`, and optional `length`.
+
+Processing: the current implementation builds a subject line, opening summary, role-specific body, matched skill evidence, project and experience highlights, and a learning-gap sentence. It starts with `Dear Hiring Team,`, ends politely, and avoids presenting missing skills as already mastered.
+
+Output: `cover_letter`, `subject_line`, `opening_summary`, `key_points_used`, `tone`, and `word_count`.
+
 ### Frontend
 
 The frontend folder is prepared for a future Next.js and Tailwind CSS app.
@@ -455,13 +521,14 @@ npm run dev
 6. Add Match Scoring Agent for deterministic internship fit scoring.
 7. Add Skill Gap Agent for learning roadmap and improvement planning.
 8. Add Application Writer Agent for customized internship answers.
-9. Add SQLite database models and persistence.
-10. Build core API routes for user profile, opportunities, and applications.
-11. Add the first LLM-powered agent workflow.
-12. Connect frontend screens to backend APIs.
-13. Add authentication and user-specific data.
-14. Improve agent orchestration with LangChain or LangGraph.
-15. Add tests, deployment configuration, and production documentation.
+9. Add Cover Letter Agent for customized internship cover letters.
+10. Add SQLite database models and persistence.
+11. Build core API routes for user profile, opportunities, and applications.
+12. Add the first LLM-powered agent workflow.
+13. Connect frontend screens to backend APIs.
+14. Add authentication and user-specific data.
+15. Improve agent orchestration with LangChain or LangGraph.
+16. Add tests, deployment configuration, and production documentation.
 
 ## Documentation
 

@@ -317,6 +317,73 @@ Future LLM upgrade:
 - Support multiple answer drafts for the same question.
 - Generate cover letters and short recruiter messages from the same context.
 
+## Cover Letter Agent
+
+Purpose: Generate a customized internship cover letter using resume, job, match, and skill-gap context.
+
+Input:
+
+```json
+{
+  "resume_profile": {},
+  "job_profile": {},
+  "match_result": {},
+  "skill_gap_result": {},
+  "tone": "professional",
+  "length": "short"
+}
+```
+
+Output:
+
+```json
+{
+  "cover_letter": "",
+  "subject_line": "",
+  "opening_summary": "",
+  "key_points_used": [],
+  "tone": "",
+  "word_count": 0
+}
+```
+
+Supported tones:
+
+- `professional`
+- `confident`
+- `friendly`
+- `concise`
+
+Supported lengths:
+
+- `short`: approximately 120-180 words
+- `medium`: approximately 180-260 words
+
+Internal logic:
+
+- Builds a subject line from the target role and company.
+- Starts the letter with `Dear Hiring Team,`.
+- Mentions target role, company, education, matched skills, relevant projects, and experience when available.
+- Mentions missing skills only as active learning areas.
+- Adds a polite closing.
+- Applies simple tone transformations.
+- Keeps the output inside the selected length range when possible.
+- Returns key points used and word count for review.
+
+Current limitations:
+
+- The agent is template-based and may need human editing before final submission.
+- Medium length depends on the amount of available resume and job context.
+- Tone options are simple transformations, not full stylistic rewrites.
+- It does not yet deeply personalize for company mission or team-specific details.
+
+Future LLM upgrade:
+
+- Use an LLM to create more natural, varied cover letters.
+- Add factual grounding checks against source profiles.
+- Generate multiple cover letter versions by tone and length.
+- Add company-specific personalization from richer job or company context.
+
 ## Profile Agent
 
 Purpose: Understand the user's academic background, skills, projects, interests, target roles, location preferences, and availability.

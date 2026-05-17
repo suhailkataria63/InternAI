@@ -11,15 +11,16 @@
 7. Match Scoring Agent compares both profiles and returns a fit score, missing skills, project relevance notes, and a recommendation.
 8. Skill Gap Agent turns missing skills into priorities, a learning roadmap, resume suggestions, and mini-projects.
 9. Application Writer Agent drafts customized answers for internship application questions.
-10. User saves strong opportunities into an application pipeline.
-11. Resume Agent helps tailor materials for selected opportunities.
-12. Application Agent tracks statuses, deadlines, and follow-ups.
-13. Interview Agent prepares the user for technical and behavioral interviews.
-14. The system keeps a history of decisions, outputs, and progress.
+10. Cover Letter Agent generates a role-specific internship cover letter.
+11. User saves strong opportunities into an application pipeline.
+12. Resume Agent helps tailor materials for selected opportunities.
+13. Application Agent tracks statuses, deadlines, and follow-ups.
+14. Interview Agent prepares the user for technical and behavioral interviews.
+15. The system keeps a history of decisions, outputs, and progress.
 
 ## Initial Workflow
 
-The current backend supports the first analysis chain: resume PDF upload, resume analysis, job description analysis, match scoring, skill gap planning, and application answer drafting. The frontend and database will be added around this workflow later.
+The current backend supports the first analysis chain: resume PDF upload, resume analysis, job description analysis, match scoring, skill gap planning, application answer drafting, and cover letter generation. The frontend and database will be added around this workflow later.
 
 ## Current API Workflow
 
@@ -29,6 +30,7 @@ The current backend supports the first analysis chain: resume PDF upload, resume
 4. `POST /api/match/score` compares both profiles and returns the fit score.
 5. `POST /api/skill-gap/analyze` turns missing skills into a roadmap and project plan.
 6. `POST /api/application/write` generates a tailored answer for a specific application question.
+7. `POST /api/cover-letter/generate` generates a customized internship cover letter.
 
 ## Future Workflow Questions
 
