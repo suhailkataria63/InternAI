@@ -38,6 +38,8 @@ Status code: `200 OK`
 
 Runs the full InternAI multi-agent pipeline in one request. This is the main endpoint for full resume-to-application analysis and works without an external LLM API key.
 
+The Next.js frontend uses this endpoint as its main API through `frontend/lib/api.ts`.
+
 Pipeline order:
 
 1. Resume Analyzer Agent

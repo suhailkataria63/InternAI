@@ -1,0 +1,92 @@
+export type Tone = "professional" | "confident" | "friendly" | "concise";
+export type CoverLetterLength = "short" | "medium";
+
+export type AnalysisRequest = {
+  resume_text: string;
+  job_description: string;
+  application_question: string;
+  tone: Tone;
+  word_limit: number;
+  cover_letter_length: CoverLetterLength;
+};
+
+export type PipelineSummary = {
+  candidate_name?: string;
+  target_role?: string;
+  company_name?: string;
+  match_score?: number;
+  match_level?: string;
+  top_matched_skills?: string[];
+  top_missing_skills?: string[];
+  highest_priority_skills?: string[];
+  recommended_next_step?: string;
+};
+
+export type MatchResult = {
+  match_score?: number;
+  match_level?: string;
+  matched_skills?: string[];
+  missing_skills?: string[];
+  project_relevance_notes?: string[];
+  recommendation?: string;
+};
+
+export type PrioritySkill = {
+  skill: string;
+  priority: "High" | "Medium" | "Low" | string;
+  reason?: string;
+  estimated_learning_time?: string;
+  learning_tasks?: string[];
+};
+
+export type RoadmapWeek = {
+  week: number;
+  focus: string;
+  skills?: string[];
+  tasks?: string[];
+  outcome?: string;
+};
+
+export type RecommendedProject = {
+  title: string;
+  description: string;
+  skills_practiced?: string[];
+  expected_outcome?: string;
+};
+
+export type SkillGapResult = {
+  target_role?: string;
+  priority_skills?: PrioritySkill[];
+  learning_roadmap?: RoadmapWeek[];
+  resume_improvement_suggestions?: string[];
+  recommended_projects?: RecommendedProject[];
+  overall_advice?: string;
+};
+
+export type ApplicationAnswer = {
+  question?: string;
+  generated_answer?: string;
+  key_points_used?: string[];
+  tone?: string;
+  word_count?: number;
+  improvement_note?: string;
+};
+
+export type CoverLetterResult = {
+  cover_letter?: string;
+  subject_line?: string;
+  opening_summary?: string;
+  key_points_used?: string[];
+  tone?: string;
+  word_count?: number;
+};
+
+export type AnalysisResponse = {
+  resume_profile: Record<string, unknown>;
+  job_profile: Record<string, unknown>;
+  match_result: MatchResult;
+  skill_gap_result: SkillGapResult;
+  application_answer: ApplicationAnswer;
+  cover_letter: CoverLetterResult;
+  pipeline_summary: PipelineSummary;
+};

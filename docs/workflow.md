@@ -21,7 +21,7 @@
 
 ## Initial Workflow
 
-The current backend supports the first analysis chain: resume PDF upload, resume analysis, job description analysis, match scoring, skill gap planning, application answer drafting, cover letter generation, and full orchestration. The frontend and database will be added around this workflow later.
+The current application supports the first analysis chain: resume text input, job description input, resume analysis, job description analysis, match scoring, skill gap planning, application answer drafting, cover letter generation, and full orchestration from the frontend UI. The database will be added around this workflow later.
 
 ## Current API Workflow
 
@@ -47,6 +47,21 @@ The orchestrator endpoint accepts raw `resume_text` and `job_description`, then 
 | 5 | Application Writer Agent | all previous outputs plus `application_question` | `application_answer` |
 | 6 | Cover Letter Agent | `resume_profile`, `job_profile`, `match_result`, `skill_gap_result` | `cover_letter` |
 | 7 | Orchestrator Service | core agent outputs | `pipeline_summary` |
+
+## Frontend-To-Backend Workflow
+
+The Next.js frontend uses the orchestrator endpoint as its main API.
+
+| UI Step | Frontend Module | Backend API |
+| --- | --- | --- |
+| User enters resume, job description, tone, word limit, and cover letter length | `AnalysisForm` | None yet |
+| User clicks `Analyze` | `frontend/lib/api.ts` | `POST /api/orchestrator/analyze-application` |
+| Backend returns full pipeline output | `analyzeApplication` | Orchestrator response |
+| UI renders summary and score | `PipelineSummaryCard`, `MatchScoreCard` | Uses `pipeline_summary`, `match_result` |
+| UI renders roadmap | `SkillGapCard` | Uses `skill_gap_result` |
+| UI renders generated writing | `ApplicationAnswerCard`, `CoverLetterCard` | Uses `application_answer`, `cover_letter` |
+
+If the backend is not running, the frontend displays a clear connection error from the API client.
 
 ## Future Workflow Questions
 

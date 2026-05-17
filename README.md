@@ -25,6 +25,7 @@ InternAI will provide a guided assistant that organizes the internship process i
 - Application Writer Agent that drafts customized internship application answers without requiring an external LLM API key.
 - Cover Letter Agent that generates customized internship cover letters without requiring an external LLM API key.
 - Multi-Agent Orchestrator endpoint that runs the complete resume-to-application pipeline in one request.
+- Next.js frontend UI for running the full orchestrator workflow from a browser.
 
 ## Tech Stack
 
@@ -558,15 +559,54 @@ This endpoint works without any external LLM API key and reuses the existing rul
 
 ### Frontend
 
-The frontend folder is prepared for a future Next.js and Tailwind CSS app.
-
-Planned setup:
+The frontend is a Next.js and Tailwind CSS app for running the full orchestrator workflow.
 
 ```bash
 cd internai/frontend
 npm install
+cp .env.example .env.local
 npm run dev
 ```
+
+The frontend should be available at `http://localhost:3000`.
+
+### Run Backend And Frontend Together
+
+Terminal 1:
+
+```bash
+cd internai/backend
+uvicorn app.main:app --reload
+```
+
+Terminal 2:
+
+```bash
+cd internai/frontend
+npm run dev
+```
+
+The frontend calls the FastAPI orchestrator endpoint configured by `NEXT_PUBLIC_API_URL`. By default, it uses `http://127.0.0.1:8000`.
+
+## Frontend Workflow
+
+The frontend page lets a user:
+
+1. Paste resume text.
+2. Paste an internship or job description.
+3. Set the application question, tone, answer word limit, and cover letter length.
+4. Click `Analyze`.
+5. Review the pipeline summary, match score, missing skills, learning roadmap, application answer, and cover letter.
+
+The `Use Sample Data` button fills the form with a tested resume and job description so the full workflow can be tried quickly.
+
+## Screenshot Placeholder
+
+Add screenshots here after the UI is run locally:
+
+- Full analysis form
+- Results dashboard
+- Application answer and cover letter sections
 
 ## Development Roadmap
 
@@ -580,10 +620,10 @@ npm run dev
 8. Add Application Writer Agent for customized internship answers.
 9. Add Cover Letter Agent for customized internship cover letters.
 10. Add Multi-Agent Orchestrator for end-to-end analysis.
-11. Add SQLite database models and persistence.
-12. Build core API routes for user profile, opportunities, and applications.
-13. Add the first LLM-powered agent workflow.
-14. Connect frontend screens to backend APIs.
+11. Add frontend UI for running the orchestrator workflow.
+12. Add SQLite database models and persistence.
+13. Build core API routes for user profile, opportunities, and applications.
+14. Add the first LLM-powered agent workflow.
 15. Add authentication and user-specific data.
 16. Improve agent orchestration with LangChain or LangGraph.
 17. Add tests, deployment configuration, and production documentation.
