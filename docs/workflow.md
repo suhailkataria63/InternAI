@@ -12,15 +12,16 @@
 8. Skill Gap Agent turns missing skills into priorities, a learning roadmap, resume suggestions, and mini-projects.
 9. Application Writer Agent drafts customized answers for internship application questions.
 10. Cover Letter Agent generates a role-specific internship cover letter.
-11. User saves strong opportunities into an application pipeline.
-12. Resume Agent helps tailor materials for selected opportunities.
-13. Application Agent tracks statuses, deadlines, and follow-ups.
-14. Interview Agent prepares the user for technical and behavioral interviews.
-15. The system keeps a history of decisions, outputs, and progress.
+11. Multi-Agent Orchestrator can run steps 4-10 from one endpoint.
+12. User saves strong opportunities into an application pipeline.
+13. Resume Agent helps tailor materials for selected opportunities.
+14. Application Agent tracks statuses, deadlines, and follow-ups.
+15. Interview Agent prepares the user for technical and behavioral interviews.
+16. The system keeps a history of decisions, outputs, and progress.
 
 ## Initial Workflow
 
-The current backend supports the first analysis chain: resume PDF upload, resume analysis, job description analysis, match scoring, skill gap planning, application answer drafting, and cover letter generation. The frontend and database will be added around this workflow later.
+The current backend supports the first analysis chain: resume PDF upload, resume analysis, job description analysis, match scoring, skill gap planning, application answer drafting, cover letter generation, and full orchestration. The frontend and database will be added around this workflow later.
 
 ## Current API Workflow
 
@@ -31,6 +32,21 @@ The current backend supports the first analysis chain: resume PDF upload, resume
 5. `POST /api/skill-gap/analyze` turns missing skills into a roadmap and project plan.
 6. `POST /api/application/write` generates a tailored answer for a specific application question.
 7. `POST /api/cover-letter/generate` generates a customized internship cover letter.
+8. `POST /api/orchestrator/analyze-application` runs the full analysis pipeline in one request.
+
+## Orchestrator Workflow
+
+The orchestrator endpoint accepts raw `resume_text` and `job_description`, then passes structured output from one agent into the next.
+
+| Step | Agent | Input | Output |
+| --- | --- | --- | --- |
+| 1 | Resume Analyzer Agent | `resume_text` | `resume_profile` |
+| 2 | JD Analyzer Agent | `job_description` | `job_profile` |
+| 3 | Match Scoring Agent | `resume_profile`, `job_profile` | `match_result` |
+| 4 | Skill Gap Agent | `resume_profile`, `job_profile`, `match_result` | `skill_gap_result` |
+| 5 | Application Writer Agent | all previous outputs plus `application_question` | `application_answer` |
+| 6 | Cover Letter Agent | `resume_profile`, `job_profile`, `match_result`, `skill_gap_result` | `cover_letter` |
+| 7 | Orchestrator Service | core agent outputs | `pipeline_summary` |
 
 ## Future Workflow Questions
 

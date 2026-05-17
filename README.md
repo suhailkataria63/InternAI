@@ -24,6 +24,7 @@ InternAI will provide a guided assistant that organizes the internship process i
 - Skill Gap Agent that turns missing skills into a practical learning roadmap, resume suggestions, and mini-project ideas.
 - Application Writer Agent that drafts customized internship application answers without requiring an external LLM API key.
 - Cover Letter Agent that generates customized internship cover letters without requiring an external LLM API key.
+- Multi-Agent Orchestrator endpoint that runs the complete resume-to-application pipeline in one request.
 
 ## Tech Stack
 
@@ -43,6 +44,7 @@ InternAI will eventually use specialized agents that collaborate around the user
 - Skill Gap Agent: Converts match gaps into prioritized learning actions and resume improvements.
 - Application Writer Agent: Generates tailored application answers from resume, job, match, and skill-gap context.
 - Cover Letter Agent: Generates role-specific cover letters from the same grounded application context.
+- Multi-Agent Orchestrator: Runs all completed agents in sequence and returns one combined analysis package.
 - Opportunity Agent: Finds and ranks internship opportunities.
 - Resume Agent: Helps tailor resumes and application materials.
 - Application Agent: Tracks applications, deadlines, and next steps.
@@ -499,6 +501,61 @@ Processing: the current implementation builds a subject line, opening summary, r
 
 Output: `cover_letter`, `subject_line`, `opening_summary`, `key_points_used`, `tone`, and `word_count`.
 
+Run the full multi-agent pipeline:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/orchestrator/analyze-application \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_text": "Jane Doe\nEducation\nB.S. Computer Science\nSkills\nPython, FastAPI, React\nProjects\nHybrid Phishing Detection System using Python and React",
+    "job_description": "Role: Software Engineering Intern\nCompany: Acme Labs\nRequired Skills\nPython, FastAPI, SQL\nPreferred Skills\nDocker\nResponsibilities\nBuild backend APIs",
+    "application_question": "Why should we hire you?",
+    "tone": "professional",
+    "word_limit": 180,
+    "cover_letter_length": "short"
+  }'
+```
+
+Expected response shape:
+
+```json
+{
+  "resume_profile": {},
+  "job_profile": {},
+  "match_result": {},
+  "skill_gap_result": {},
+  "application_answer": {},
+  "cover_letter": {},
+  "pipeline_summary": {
+    "candidate_name": "Jane Doe",
+    "target_role": "Software Engineering Intern",
+    "company_name": "Acme Labs",
+    "match_score": 57,
+    "match_level": "Partial Fit",
+    "top_matched_skills": ["Python", "FastAPI"],
+    "top_missing_skills": ["SQL"],
+    "highest_priority_skills": ["SQL"],
+    "recommended_next_step": "Start with the highest priority missing skills: SQL."
+  }
+}
+```
+
+## Multi-Agent Orchestrator
+
+The Multi-Agent Orchestrator is the main endpoint for full application analysis. It accepts raw resume text and a pasted internship or job description, then runs the completed agents in sequence.
+
+Agent communication flow:
+
+1. Resume Analyzer creates `resume_profile`.
+2. JD Analyzer creates `job_profile`.
+3. Match Scoring compares both profiles and creates `match_result`.
+4. Skill Gap Agent uses both profiles plus `match_result` to create `skill_gap_result`.
+5. Application Writer uses all previous outputs to create `application_answer`.
+6. Cover Letter Agent uses the same context to create `cover_letter`.
+7. Orchestrator builds `pipeline_summary` for quick review.
+
+This endpoint works without any external LLM API key and reuses the existing rule-based and template-based agents.
+
 ### Frontend
 
 The frontend folder is prepared for a future Next.js and Tailwind CSS app.
@@ -522,13 +579,14 @@ npm run dev
 7. Add Skill Gap Agent for learning roadmap and improvement planning.
 8. Add Application Writer Agent for customized internship answers.
 9. Add Cover Letter Agent for customized internship cover letters.
-10. Add SQLite database models and persistence.
-11. Build core API routes for user profile, opportunities, and applications.
-12. Add the first LLM-powered agent workflow.
-13. Connect frontend screens to backend APIs.
-14. Add authentication and user-specific data.
-15. Improve agent orchestration with LangChain or LangGraph.
-16. Add tests, deployment configuration, and production documentation.
+10. Add Multi-Agent Orchestrator for end-to-end analysis.
+11. Add SQLite database models and persistence.
+12. Build core API routes for user profile, opportunities, and applications.
+13. Add the first LLM-powered agent workflow.
+14. Connect frontend screens to backend APIs.
+15. Add authentication and user-specific data.
+16. Improve agent orchestration with LangChain or LangGraph.
+17. Add tests, deployment configuration, and production documentation.
 
 ## Documentation
 

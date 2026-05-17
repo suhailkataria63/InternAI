@@ -32,6 +32,94 @@ Example response:
 
 Status code: `200 OK`
 
+## Full Application Orchestration
+
+### `POST /api/orchestrator/analyze-application`
+
+Runs the full InternAI multi-agent pipeline in one request. This is the main endpoint for full resume-to-application analysis and works without an external LLM API key.
+
+Pipeline order:
+
+1. Resume Analyzer Agent
+2. JD Analyzer Agent
+3. Match Scoring Agent
+4. Skill Gap Agent
+5. Application Writer Agent
+6. Cover Letter Agent
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/orchestrator/analyze-application \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_text": "Jane Doe\nEducation\nB.S. Computer Science\nSkills\nPython, FastAPI, React\nProjects\nHybrid Phishing Detection System using Python and React",
+    "job_description": "Role: Software Engineering Intern\nCompany: Acme Labs\nRequired Skills\nPython, FastAPI, SQL\nPreferred Skills\nDocker\nResponsibilities\nBuild backend APIs",
+    "application_question": "Why should we hire you?",
+    "tone": "professional",
+    "word_limit": 180,
+    "cover_letter_length": "short"
+  }'
+```
+
+Example response:
+
+```json
+{
+  "resume_profile": {
+    "name": "Jane Doe",
+    "skills": ["Python", "React", "FastAPI"]
+  },
+  "job_profile": {
+    "role_title": "Software Engineering Intern",
+    "company_name": "Acme Labs"
+  },
+  "match_result": {
+    "match_score": 57,
+    "match_level": "Partial Fit",
+    "matched_skills": ["Python", "FastAPI"],
+    "missing_skills": ["SQL"]
+  },
+  "skill_gap_result": {
+    "target_role": "Software Engineering Intern",
+    "priority_skills": []
+  },
+  "application_answer": {
+    "question": "Why should we hire you?",
+    "generated_answer": "..."
+  },
+  "cover_letter": {
+    "subject_line": "Application for Software Engineering Intern at Acme Labs",
+    "cover_letter": "Dear Hiring Team,\n\n..."
+  },
+  "pipeline_summary": {
+    "candidate_name": "Jane Doe",
+    "target_role": "Software Engineering Intern",
+    "company_name": "Acme Labs",
+    "match_score": 57,
+    "match_level": "Partial Fit",
+    "top_matched_skills": ["Python", "FastAPI"],
+    "top_missing_skills": ["SQL"],
+    "highest_priority_skills": ["SQL"],
+    "recommended_next_step": "Start with the highest priority missing skills: SQL."
+  }
+}
+```
+
+Validation error for empty text:
+
+```json
+{
+  "detail": "resume_text is required and cannot be empty."
+}
+```
+
+Success status code: `200 OK`
+
+Validation error status code: `400 Bad Request`
+
+Agent failure status code: `500 Internal Server Error`
+
 ## Resume Upload
 
 ### `POST /api/resume/upload`

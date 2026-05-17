@@ -384,6 +384,66 @@ Future LLM upgrade:
 - Generate multiple cover letter versions by tone and length.
 - Add company-specific personalization from richer job or company context.
 
+## Multi-Agent Orchestrator
+
+Purpose: Run the completed InternAI agents in sequence and return one end-to-end application analysis response.
+
+Input:
+
+```json
+{
+  "resume_text": "...",
+  "job_description": "...",
+  "application_question": "Why should we hire you?",
+  "tone": "professional",
+  "word_limit": 180,
+  "cover_letter_length": "short"
+}
+```
+
+Output:
+
+```json
+{
+  "resume_profile": {},
+  "job_profile": {},
+  "match_result": {},
+  "skill_gap_result": {},
+  "application_answer": {},
+  "cover_letter": {},
+  "pipeline_summary": {}
+}
+```
+
+Agent communication:
+
+- Resume Analyzer receives raw resume text and returns `resume_profile`.
+- JD Analyzer receives raw job description text and returns `job_profile`.
+- Match Scoring receives `resume_profile` and `job_profile`.
+- Skill Gap receives `resume_profile`, `job_profile`, and `match_result`.
+- Application Writer receives all previous outputs plus the application question.
+- Cover Letter receives `resume_profile`, `job_profile`, `match_result`, and `skill_gap_result`.
+- Orchestrator Service builds `pipeline_summary` from the major outputs.
+
+Internal logic:
+
+- Runs agents in a fixed deterministic order.
+- Reuses the existing rule-based and template-based agents.
+- Validates empty resume text and job description before running the pipeline.
+- Reports the failing step if an agent raises an error.
+
+Current limitations:
+
+- The orchestrator currently runs synchronously in one request.
+- It does not yet persist pipeline runs to a database.
+- It does not yet support optional skipping of individual agents.
+
+Future LLM upgrade:
+
+- Add LangGraph orchestration for stateful agent coordination.
+- Persist each pipeline run and intermediate output.
+- Add retry policies and richer observability per agent step.
+
 ## Profile Agent
 
 Purpose: Understand the user's academic background, skills, projects, interests, target roles, location preferences, and availability.
