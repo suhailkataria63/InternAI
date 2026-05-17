@@ -22,6 +22,7 @@ InternAI will provide a guided assistant that organizes the internship process i
 - JD Analyzer Agent that converts internship or job descriptions into structured job profiles without requiring an external LLM API key.
 - Match Scoring Agent that compares resume and job profiles to calculate an internship fit score.
 - Skill Gap Agent that turns missing skills into a practical learning roadmap, resume suggestions, and mini-project ideas.
+- Application Writer Agent that drafts customized internship application answers without requiring an external LLM API key.
 
 ## Tech Stack
 
@@ -39,6 +40,7 @@ InternAI will eventually use specialized agents that collaborate around the user
 - JD Analyzer Agent: Understands internship descriptions, required skills, responsibilities, eligibility, and work details.
 - Match Scoring Agent: Compares parsed resume and job profiles to explain fit, matched skills, and missing skills.
 - Skill Gap Agent: Converts match gaps into prioritized learning actions and resume improvements.
+- Application Writer Agent: Generates tailored application answers from resume, job, match, and skill-gap context.
 - Opportunity Agent: Finds and ranks internship opportunities.
 - Resume Agent: Helps tailor resumes and application materials.
 - Application Agent: Tracks applications, deadlines, and next steps.
@@ -368,6 +370,69 @@ Processing: the agent reads `missing_skills`, compares them against required and
 
 Output: `target_role`, `priority_skills`, `learning_roadmap`, `resume_improvement_suggestions`, `recommended_projects`, and `overall_advice`.
 
+Generate a customized application answer:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/application/write \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_profile": {
+      "name": "Jane Doe",
+      "education": ["B.S. Computer Science"],
+      "skills": ["Python", "FastAPI", "React"],
+      "projects": [
+        {
+          "name": "Hybrid Phishing Detection System",
+          "description": "Detected phishing URLs with machine learning and a React dashboard",
+          "technologies": ["Python", "Machine Learning", "React"]
+        }
+      ]
+    },
+    "job_profile": {
+      "role_title": "Software Engineering Intern",
+      "company_name": "Acme Labs"
+    },
+    "match_result": {
+      "matched_skills": ["Python", "FastAPI", "React"],
+      "missing_skills": ["SQL", "Docker"]
+    },
+    "skill_gap_result": {
+      "priority_skills": [{"skill": "SQL"}, {"skill": "Docker"}],
+      "overall_advice": "Start with SQL, then Docker."
+    },
+    "application_question": "Why should we hire you?",
+    "tone": "professional",
+    "word_limit": 180
+  }'
+```
+
+Expected response shape:
+
+```json
+{
+  "question": "Why should we hire you?",
+  "generated_answer": "I am a candidate with education in B.S. Computer Science...",
+  "key_points_used": [
+    "Education: B.S. Computer Science",
+    "Target role: Software Engineering Intern",
+    "Matched skills: Python, FastAPI, React"
+  ],
+  "tone": "professional",
+  "word_count": 81,
+  "improvement_note": "Review the answer after adding stronger evidence for: SQL, Docker."
+}
+```
+
+## Application Writer Agent
+
+The Application Writer Agent creates customized internship application answers using the parsed resume profile, parsed job profile, match result, skill gap result, and a specific application question.
+
+Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, `application_question`, optional `tone`, and optional `word_limit`.
+
+Processing: the current implementation detects the question type, selects a template, inserts education, target role, matched skills, relevant projects, and learning focus, then applies tone and trims to the requested word limit. It avoids claiming missing skills as already mastered.
+
+Output: the original question, generated answer, key points used, tone, word count, and an improvement note.
+
 ### Frontend
 
 The frontend folder is prepared for a future Next.js and Tailwind CSS app.
@@ -389,13 +454,14 @@ npm run dev
 5. Add JD Analyzer Agent for structured internship description parsing.
 6. Add Match Scoring Agent for deterministic internship fit scoring.
 7. Add Skill Gap Agent for learning roadmap and improvement planning.
-8. Add SQLite database models and persistence.
-9. Build core API routes for user profile, opportunities, and applications.
-10. Add the first LLM-powered agent workflow.
-11. Connect frontend screens to backend APIs.
-12. Add authentication and user-specific data.
-13. Improve agent orchestration with LangChain or LangGraph.
-14. Add tests, deployment configuration, and production documentation.
+8. Add Application Writer Agent for customized internship answers.
+9. Add SQLite database models and persistence.
+10. Build core API routes for user profile, opportunities, and applications.
+11. Add the first LLM-powered agent workflow.
+12. Connect frontend screens to backend APIs.
+13. Add authentication and user-specific data.
+14. Improve agent orchestration with LangChain or LangGraph.
+15. Add tests, deployment configuration, and production documentation.
 
 ## Documentation
 

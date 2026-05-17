@@ -223,6 +223,70 @@ Success status code: `200 OK`
 
 Validation error status code: `422 Unprocessable Entity`
 
+## Application Answer Writing
+
+### `POST /api/application/write`
+
+Generates a customized internship application answer using resume, job, match, and skill-gap context. This endpoint works without an external LLM API key.
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/application/write \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_profile": {
+      "name": "Jane Doe",
+      "education": ["B.S. Computer Science"],
+      "skills": ["Python", "FastAPI", "React"],
+      "projects": [
+        {
+          "name": "Hybrid Phishing Detection System",
+          "description": "Detected phishing URLs with machine learning and a React dashboard",
+          "technologies": ["Python", "Machine Learning", "React"]
+        }
+      ]
+    },
+    "job_profile": {
+      "role_title": "Software Engineering Intern",
+      "company_name": "Acme Labs"
+    },
+    "match_result": {
+      "matched_skills": ["Python", "FastAPI", "React"],
+      "missing_skills": ["SQL", "Docker"]
+    },
+    "skill_gap_result": {
+      "priority_skills": [{"skill": "SQL"}, {"skill": "Docker"}],
+      "overall_advice": "Start with SQL, then Docker."
+    },
+    "application_question": "Why should we hire you?",
+    "tone": "professional",
+    "word_limit": 180
+  }'
+```
+
+Example response:
+
+```json
+{
+  "question": "Why should we hire you?",
+  "generated_answer": "I am a candidate with education in B.S. Computer Science, applying for the Software Engineering Intern role at Acme Labs...",
+  "key_points_used": [
+    "Education: B.S. Computer Science",
+    "Target role: Software Engineering Intern",
+    "Matched skills: Python, FastAPI, React",
+    "Learning focus: SQL, Docker"
+  ],
+  "tone": "professional",
+  "word_count": 81,
+  "improvement_note": "Review the answer after adding stronger evidence for: SQL, Docker."
+}
+```
+
+Success status code: `200 OK`
+
+Validation error status code: `422 Unprocessable Entity`
+
 ## Match Scoring
 
 ### `POST /api/match/score`

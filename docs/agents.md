@@ -247,6 +247,76 @@ Future LLM upgrade:
 - Convert roadmap items into calendar tasks.
 - Suggest exact resume bullet rewrites after the project is completed.
 
+## Application Writer Agent
+
+Purpose: Generate customized internship application answers from the candidate profile, job profile, match result, skill gap result, and a specific application question.
+
+Input:
+
+```json
+{
+  "resume_profile": {},
+  "job_profile": {},
+  "match_result": {},
+  "skill_gap_result": {},
+  "application_question": "Why should we hire you?",
+  "tone": "professional",
+  "word_limit": 180
+}
+```
+
+Output:
+
+```json
+{
+  "question": "",
+  "generated_answer": "",
+  "key_points_used": [],
+  "tone": "",
+  "word_count": 0,
+  "improvement_note": ""
+}
+```
+
+Question types:
+
+- `why_hire`
+- `why_interested`
+- `relevant_experience`
+- `cover_message`
+- `general`
+
+Tone options:
+
+- `professional`
+- `confident`
+- `friendly`
+- `concise`
+
+Internal logic:
+
+- Detects the application question type from simple keyword patterns.
+- Extracts candidate education, target role, matched skills, relevant projects, and learning focus.
+- Selects a template based on the question type.
+- Mentions missing skills only as learning goals, not mastered skills.
+- Applies a simple tone transformation.
+- Trims the answer to the requested word limit when possible.
+- Returns the answer with key points used, word count, and an improvement note.
+
+Current limitations:
+
+- The agent is template-based and may sound repetitive across many applications.
+- Tone control is intentionally simple.
+- Company-specific personalization depends on the details included in `job_profile`.
+- It does not yet rewrite the answer based on recruiter feedback.
+
+Future LLM upgrade:
+
+- Use an LLM to generate more natural and varied application answers.
+- Add stricter factual grounding checks.
+- Support multiple answer drafts for the same question.
+- Generate cover letters and short recruiter messages from the same context.
+
 ## Profile Agent
 
 Purpose: Understand the user's academic background, skills, projects, interests, target roles, location preferences, and availability.
