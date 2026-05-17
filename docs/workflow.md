@@ -9,15 +9,16 @@
 5. User pastes an internship or job description.
 6. JD Analyzer Agent converts the description into a structured job profile.
 7. Match Scoring Agent compares both profiles and returns a fit score, missing skills, project relevance notes, and a recommendation.
-8. User saves strong opportunities into an application pipeline.
-9. Resume Agent helps tailor materials for selected opportunities.
-10. Application Agent tracks statuses, deadlines, and follow-ups.
-11. Interview Agent prepares the user for technical and behavioral interviews.
-12. The system keeps a history of decisions, outputs, and progress.
+8. Skill Gap Agent turns missing skills into priorities, a learning roadmap, resume suggestions, and mini-projects.
+9. User saves strong opportunities into an application pipeline.
+10. Resume Agent helps tailor materials for selected opportunities.
+11. Application Agent tracks statuses, deadlines, and follow-ups.
+12. Interview Agent prepares the user for technical and behavioral interviews.
+13. The system keeps a history of decisions, outputs, and progress.
 
 ## Initial Workflow
 
-The current backend supports the first analysis chain: resume PDF upload, resume analysis, job description analysis, and match scoring. The frontend and database will be added around this workflow later.
+The current backend supports the first analysis chain: resume PDF upload, resume analysis, job description analysis, match scoring, and skill gap planning. The frontend and database will be added around this workflow later.
 
 ## Current API Workflow
 
@@ -25,6 +26,7 @@ The current backend supports the first analysis chain: resume PDF upload, resume
 2. `POST /api/resume/analyze` converts extracted text into `resume_profile`.
 3. `POST /api/jobs/analyze` converts pasted job text into `job_profile`.
 4. `POST /api/match/score` compares both profiles and returns the fit score.
+5. `POST /api/skill-gap/analyze` turns missing skills into a roadmap and project plan.
 
 ## Future Workflow Questions
 

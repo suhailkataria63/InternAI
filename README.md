@@ -21,6 +21,7 @@ InternAI will provide a guided assistant that organizes the internship process i
 - Resume Analyzer Agent that converts resume text into a structured profile without requiring an external LLM API key.
 - JD Analyzer Agent that converts internship or job descriptions into structured job profiles without requiring an external LLM API key.
 - Match Scoring Agent that compares resume and job profiles to calculate an internship fit score.
+- Skill Gap Agent that turns missing skills into a practical learning roadmap, resume suggestions, and mini-project ideas.
 
 ## Tech Stack
 
@@ -37,6 +38,7 @@ InternAI will eventually use specialized agents that collaborate around the user
 - Profile Agent: Understands the user's skills, education, preferences, and career goals.
 - JD Analyzer Agent: Understands internship descriptions, required skills, responsibilities, eligibility, and work details.
 - Match Scoring Agent: Compares parsed resume and job profiles to explain fit, matched skills, and missing skills.
+- Skill Gap Agent: Converts match gaps into prioritized learning actions and resume improvements.
 - Opportunity Agent: Finds and ranks internship opportunities.
 - Resume Agent: Helps tailor resumes and application materials.
 - Application Agent: Tracks applications, deadlines, and next steps.
@@ -268,6 +270,104 @@ Processing: the agent normalizes skills, calculates weighted overlap, checks pro
 
 Output: a score, match level, matched skills, missing required skills, project relevance notes, and a recommendation.
 
+Analyze skill gaps and generate a learning plan:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/skill-gap/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_profile": {
+      "name": "Jane Doe",
+      "skills": ["Python", "FastAPI"],
+      "projects": [
+        "FastAPI internship tracker",
+        {
+          "name": "Hybrid Phishing Detection System",
+          "description": "Detected phishing URLs with machine learning and a React dashboard.",
+          "technologies": ["Python", "Machine Learning", "React"]
+        }
+      ],
+      "education": ["B.S. Computer Science"],
+      "experience": [],
+      "certifications": []
+    },
+    "job_profile": {
+      "role_title": "Software Engineering Intern",
+      "required_skills": ["Python", "FastAPI", "SQL"],
+      "preferred_skills": ["Docker"],
+      "responsibilities": ["Build backend APIs"],
+      "keywords": ["Backend", "SQL", "Docker"]
+    },
+    "match_result": {
+      "match_score": 72,
+      "match_level": "Good Fit",
+      "matched_skills": ["Python", "FastAPI"],
+      "missing_skills": ["SQL", "Docker"],
+      "project_relevance_notes": ["Project matches FastAPI."],
+      "recommendation": "Add SQL and Docker evidence."
+    }
+  }'
+```
+
+Expected response shape:
+
+```json
+{
+  "target_role": "Software Engineering Intern",
+  "priority_skills": [
+    {
+      "skill": "SQL",
+      "priority": "High",
+      "reason": "SQL is listed as a required skill for Software Engineering Intern.",
+      "estimated_learning_time": "2-3 weeks",
+      "learning_tasks": ["Practice SELECT, WHERE, JOIN, GROUP BY, and ORDER BY queries."]
+    }
+  ],
+  "learning_roadmap": [
+    {
+      "week": 1,
+      "focus": "High priority: SQL",
+      "skills": ["SQL"],
+      "tasks": ["Practice SELECT, WHERE, JOIN, GROUP BY, and ORDER BY queries."],
+      "outcome": "Show practical evidence of SQL in a project or resume bullet."
+    }
+  ],
+  "resume_improvement_suggestions": ["Add evidence for required skills: SQL."],
+  "recommended_projects": [
+    {
+      "title": "Software Engineering Intern mini-project",
+      "description": "Build a small project that demonstrates SQL, Docker in a realistic workflow.",
+      "skills_practiced": ["SQL", "Docker"],
+      "expected_outcome": "A resume-ready project with a short README, screenshots, and clear technical bullets."
+    }
+  ],
+  "overall_advice": "Your current match score is 72. Start with the High priority skills first, then add a project that proves those skills in context."
+}
+```
+
+## Skill Gap Agent
+
+The Skill Gap Agent receives `resume_profile`, `job_profile`, and `match_result`, then turns missing skills into an actionable learning plan.
+
+Input: parsed resume profile, parsed job profile, and match score output.
+
+The `resume_profile.projects` field accepts either simple strings or structured project objects:
+
+```json
+[
+  "FastAPI internship tracker",
+  {
+    "name": "Hybrid Phishing Detection System",
+    "description": "Detected phishing URLs with machine learning and a React dashboard.",
+    "technologies": ["Python", "Machine Learning", "React"]
+  }
+]
+```
+
+Processing: the agent reads `missing_skills`, compares them against required and preferred job skills, assigns High, Medium, or Low priority, estimates learning time, generates learning tasks, builds a week-by-week roadmap, and suggests resume improvements and mini-projects.
+
+Output: `target_role`, `priority_skills`, `learning_roadmap`, `resume_improvement_suggestions`, `recommended_projects`, and `overall_advice`.
+
 ### Frontend
 
 The frontend folder is prepared for a future Next.js and Tailwind CSS app.
@@ -288,13 +388,14 @@ npm run dev
 4. Add Resume Analyzer Agent for structured resume parsing.
 5. Add JD Analyzer Agent for structured internship description parsing.
 6. Add Match Scoring Agent for deterministic internship fit scoring.
-7. Add SQLite database models and persistence.
-8. Build core API routes for user profile, opportunities, and applications.
-9. Add the first LLM-powered agent workflow.
-10. Connect frontend screens to backend APIs.
-11. Add authentication and user-specific data.
-12. Improve agent orchestration with LangChain or LangGraph.
-13. Add tests, deployment configuration, and production documentation.
+7. Add Skill Gap Agent for learning roadmap and improvement planning.
+8. Add SQLite database models and persistence.
+9. Build core API routes for user profile, opportunities, and applications.
+10. Add the first LLM-powered agent workflow.
+11. Connect frontend screens to backend APIs.
+12. Add authentication and user-specific data.
+13. Improve agent orchestration with LangChain or LangGraph.
+14. Add tests, deployment configuration, and production documentation.
 
 ## Documentation
 

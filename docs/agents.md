@@ -188,6 +188,65 @@ Future improvements:
 - Add role-specific scoring profiles.
 - Store score history for application planning.
 
+## Skill Gap Agent
+
+Purpose: Convert the match result into a prioritized learning roadmap, resume improvement suggestions, and recommended mini-projects.
+
+Input:
+
+```json
+{
+  "resume_profile": {},
+  "job_profile": {},
+  "match_result": {
+    "match_score": 72,
+    "match_level": "Good Fit",
+    "matched_skills": [],
+    "missing_skills": ["SQL", "Docker"],
+    "project_relevance_notes": [],
+    "recommendation": ""
+  }
+}
+```
+
+Output:
+
+```json
+{
+  "target_role": "",
+  "priority_skills": [],
+  "learning_roadmap": [],
+  "resume_improvement_suggestions": [],
+  "recommended_projects": [],
+  "overall_advice": ""
+}
+```
+
+Internal logic:
+
+- Reads `missing_skills` from the Match Scoring Agent output.
+- Compares each missing skill against `job_profile.required_skills` and `job_profile.preferred_skills`.
+- Marks required missing skills as `High` priority.
+- Marks preferred missing skills as `Medium` priority.
+- Marks uncategorized missing skills as `Low` priority.
+- Generates learning tasks and estimated learning time for each skill.
+- Builds a week-by-week roadmap ordered by priority.
+- Suggests resume improvements based on missing skills, project evidence, experience, and target role.
+- Recommends mini-projects that can prove missing skills in a recruiter-friendly way.
+
+Current limitations:
+
+- The agent is rule-based and does not yet personalize based on user schedule or learning style.
+- Learning time estimates are simple defaults by priority.
+- Mini-project recommendations are generated from skill gaps and role title, not from a full project catalog.
+
+Future LLM upgrade:
+
+- Use an LLM to create more personalized learning plans.
+- Generate role-specific project briefs with milestones.
+- Convert roadmap items into calendar tasks.
+- Suggest exact resume bullet rewrites after the project is completed.
+
 ## Profile Agent
 
 Purpose: Understand the user's academic background, skills, projects, interests, target roles, location preferences, and availability.

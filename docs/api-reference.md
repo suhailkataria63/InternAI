@@ -114,6 +114,115 @@ Success status code: `200 OK`
 
 Validation error status code: `422 Unprocessable Entity`
 
+## Skill Gap Analysis
+
+### `POST /api/skill-gap/analyze`
+
+Accepts a parsed resume profile, parsed job profile, and match result. Returns priority skills, a learning roadmap, resume improvement suggestions, recommended mini-projects, and overall advice. This endpoint works without an external LLM API key.
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/skill-gap/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_profile": {
+      "name": "Jane Doe",
+      "skills": ["Python", "FastAPI"],
+      "projects": [
+        "FastAPI internship tracker",
+        {
+          "name": "Hybrid Phishing Detection System",
+          "description": "Detected phishing URLs with machine learning and a React dashboard.",
+          "technologies": ["Python", "Machine Learning", "React"]
+        }
+      ],
+      "education": ["B.S. Computer Science"],
+      "experience": [],
+      "certifications": []
+    },
+    "job_profile": {
+      "role_title": "Software Engineering Intern",
+      "required_skills": ["Python", "FastAPI", "SQL"],
+      "preferred_skills": ["Docker"],
+      "responsibilities": ["Build backend APIs"],
+      "keywords": ["Backend", "SQL", "Docker"]
+    },
+    "match_result": {
+      "match_score": 72,
+      "match_level": "Good Fit",
+      "matched_skills": ["Python", "FastAPI"],
+      "missing_skills": ["SQL", "Docker"],
+      "project_relevance_notes": ["Project matches FastAPI."],
+      "recommendation": "Add SQL and Docker evidence."
+    }
+  }'
+```
+
+`resume_profile.projects` may be a list of strings, a list of structured project objects, or a mix of both. Structured project objects support `name`, `description`, and `technologies`.
+
+Example response:
+
+```json
+{
+  "target_role": "Software Engineering Intern",
+  "priority_skills": [
+    {
+      "skill": "SQL",
+      "priority": "High",
+      "reason": "SQL is listed as a required skill for Software Engineering Intern.",
+      "estimated_learning_time": "2-3 weeks",
+      "learning_tasks": [
+        "Practice SELECT, WHERE, JOIN, GROUP BY, and ORDER BY queries.",
+        "Design a small database schema for a real use case.",
+        "Use SQL queries inside a backend API endpoint."
+      ]
+    },
+    {
+      "skill": "Docker",
+      "priority": "Medium",
+      "reason": "Docker is listed as a preferred skill for Software Engineering Intern.",
+      "estimated_learning_time": "1-2 weeks",
+      "learning_tasks": [
+        "Learn Dockerfile basics, images, containers, and ports.",
+        "Containerize a small backend application.",
+        "Write a short README explaining how to run the container."
+      ]
+    }
+  ],
+  "learning_roadmap": [
+    {
+      "week": 1,
+      "focus": "High priority: SQL",
+      "skills": ["SQL"],
+      "tasks": [
+        "Practice SELECT, WHERE, JOIN, GROUP BY, and ORDER BY queries.",
+        "Design a small database schema for a real use case.",
+        "Use SQL queries inside a backend API endpoint."
+      ],
+      "outcome": "Show practical evidence of SQL in a project or resume bullet."
+    }
+  ],
+  "resume_improvement_suggestions": [
+    "Add evidence for required skills: SQL.",
+    "Rewrite project bullets to mention tools, measurable outcomes, and job-relevant keywords."
+  ],
+  "recommended_projects": [
+    {
+      "title": "Software Engineering Intern mini-project",
+      "description": "Build a small project that demonstrates SQL, Docker in a realistic workflow.",
+      "skills_practiced": ["SQL", "Docker"],
+      "expected_outcome": "A resume-ready project with a short README, screenshots, and clear technical bullets."
+    }
+  ],
+  "overall_advice": "Your current match score is 72. Start with the High priority skills first, then add a project that proves those skills in context."
+}
+```
+
+Success status code: `200 OK`
+
+Validation error status code: `422 Unprocessable Entity`
+
 ## Match Scoring
 
 ### `POST /api/match/score`

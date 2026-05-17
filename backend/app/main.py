@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.jobs import router as jobs_router
 from app.api.match import router as match_router
 from app.api.resume import router as resume_router
+from app.api.skill_gap import router as skill_gap_router
 from app.config import settings
 
 
@@ -24,6 +25,7 @@ app.add_middleware(
 app.include_router(resume_router)
 app.include_router(jobs_router)
 app.include_router(match_router)
+app.include_router(skill_gap_router)
 
 
 @app.get("/health", tags=["System"])
