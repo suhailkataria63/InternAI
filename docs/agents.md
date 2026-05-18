@@ -37,19 +37,24 @@ Internal logic:
 
 - Normalizes raw resume text into clean lines.
 - Extracts email and phone with regular expressions.
-- Infers the candidate name from the first readable lines when possible.
-- Detects common resume section headings such as `Education`, `Skills`, `Projects`, `Experience`, and `Certifications`.
-- Extracts section content into lists.
-- Detects common technical skills from the whole resume and from the skills section.
-- Builds simple strengths and improvement areas based on which profile fields are present or missing.
+- Extracts candidate name from `Name:` labels, first meaningful lines, and phrases such as `I am...`, `My name is...`, and `Suhail Kataria is pursuing...`.
+- Avoids using degree names, project names, section headings, and skill names as candidate names.
+- Detects education from section headings and paragraph keywords such as `B.Tech`, `Bachelor`, `Artificial Intelligence`, `Data Science`, `AI&DS`, `3rd Year`, `6th Semester`, `CGC Landran`, `Chandigarh Group of Colleges`, and `IKGPTU`.
+- Detects expanded technical skills including Python, JavaScript, TypeScript, React, Next.js, Node.js, FastAPI, Django, Flask, Machine Learning, Deep Learning, NLP, SQL, PostgreSQL, SQLite, Pandas, NumPy, Scikit-learn, TensorFlow, PyTorch, LangChain, LangGraph, CrewAI, RAG, AI Agents, Docker, Git, GitHub, REST API, Tailwind CSS, HTML, and CSS.
+- Extracts projects from sections, bullet-style lines, and paragraph phrases such as `Projects include...`, `Project: ...`, and `Another project is...`.
+- Returns projects as structured objects with `name`, `description`, and `technologies`.
+- Extracts experience from phrases like `Experience includes AI Intern at Unified Mentor`, `AI Intern at...`, `Internship at...`, and `Worked as...`.
+- Extracts certifications from certification-related keywords and providers such as Coursera, Udemy, Google, Microsoft, IBM, AWS, and EC-Council.
+- Builds strengths and improvement areas based on actual extracted profile evidence.
 - Stores an LLM-ready prompt template for future LangChain or LangGraph integration.
 
 Current limitations:
 
 - The agent is rule-based and does not deeply understand resume context yet.
 - Name detection works best when the candidate name appears near the top of the resume.
-- Skills are detected from a starter keyword list and may miss uncommon tools.
-- Section extraction depends on recognizable headings.
+- Skills are detected from a curated keyword list and may miss uncommon tools.
+- Paragraph extraction is stronger than before, but unusual grammar can still produce partial results.
+- Project descriptions are inferred from nearby text and may need human cleanup.
 - The agent does not yet score resume quality or tailor content for a specific internship.
 
 Future improvements:

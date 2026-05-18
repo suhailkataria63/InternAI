@@ -154,7 +154,13 @@ Expected response shape:
     "phone": "+1 555 123 4567",
     "education": ["B.S. Computer Science"],
     "skills": ["Python", "React", "FastAPI"],
-    "projects": ["Internship tracker app"],
+    "projects": [
+      {
+        "name": "Internship tracker app",
+        "description": "Internship tracker app",
+        "technologies": []
+      }
+    ],
     "experience": [],
     "certifications": [],
     "strengths": [
@@ -175,9 +181,30 @@ The Resume Analyzer Agent receives raw text, usually from the resume PDF upload 
 
 Input: raw resume text in the `resume_text` field.
 
-Processing: the current implementation uses rule-based extraction for name, email, phone, resume sections, skills, strengths, and improvement areas. A prompt template is stored in the agent file so the same output format can later be powered by LangChain or LangGraph.
+Processing: the current implementation uses improved rule-based extraction for labels, section headings, and paragraph-style text. It detects names from `Name:` labels, first meaningful lines, and phrases such as `Suhail Kataria is pursuing...`; detects education keywords like `B.Tech`, `AI&DS`, `CGC Landran`, and `IKGPTU`; extracts expanded technical skills; detects projects from bullet lines and phrases like `Projects include...`; and returns projects as structured objects with `name`, `description`, and `technologies`.
 
 Output: a normalized `profile` object that can be reused by future Profile, Opportunity, Resume, and Interview agents.
+
+Example extracted resume profile:
+
+```json
+{
+  "name": "Suhail Kataria",
+  "education": [
+    "B.Tech in Artificial Intelligence and Data Science at CGC Landran under IKGPTU"
+  ],
+  "skills": ["Python", "React", "FastAPI", "Machine Learning", "SQL"],
+  "projects": [
+    {
+      "name": "Hybrid Phishing Detection System",
+      "description": "Hybrid Phishing Detection System using Python, Machine Learning and React",
+      "technologies": ["Python", "React", "Machine Learning"]
+    }
+  ],
+  "experience": ["AI Intern at Unified Mentor"],
+  "certifications": ["Google Data Analytics Certificate from Coursera"]
+}
+```
 
 Analyze an internship or job description:
 

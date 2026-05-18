@@ -5,7 +5,7 @@
 1. User creates or imports an internship profile.
 2. InternAI identifies target roles, skills, preferences, and constraints.
 3. User uploads a resume PDF, and the backend extracts raw text.
-4. Resume Analyzer Agent converts resume text into a structured profile.
+4. Resume Analyzer Agent converts resume text into a structured profile, including improved paragraph-style extraction for name, education, skills, projects, experience, and certifications.
 5. User pastes an internship or job description.
 6. JD Analyzer Agent converts the description into a structured job profile.
 7. Match Scoring Agent compares both profiles and returns a fit score, missing skills, project relevance notes, and a recommendation.
@@ -50,6 +50,8 @@ The orchestrator endpoint accepts raw `resume_text` and `job_description`, then 
 | 5 | Application Writer Agent | all previous outputs plus `application_question` | `application_answer` |
 | 6 | Cover Letter Agent | `resume_profile`, `job_profile`, `match_result`, `skill_gap_result` | `cover_letter` |
 | 7 | Orchestrator Service | core agent outputs | `pipeline_summary` |
+
+Improved resume extraction strengthens every downstream agent because match scoring, skill-gap planning, application answers, cover letters, and tracker summaries all reuse `resume_profile`.
 
 ## Frontend-To-Backend Workflow
 
