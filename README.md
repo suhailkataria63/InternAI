@@ -126,8 +126,8 @@ Expected response shape:
 
 ```json
 {
-  "filename": "resume.pdf",
-  "text_length": 1234,
+  "filename": "Resume.pdf",
+  "text_length": 2878,
   "extracted_text": "..."
 }
 ```
@@ -681,17 +681,31 @@ The frontend calls the FastAPI orchestrator endpoint configured by `NEXT_PUBLIC_
 
 The frontend page lets a user:
 
-1. Paste resume text.
-2. Paste an internship or job description.
-3. Set the application question, tone, answer word limit, and cover letter length.
-4. Click `Analyze`.
-5. Review the pipeline summary, large match score, score breakdown, grouped matched/missing skills, learning roadmap, application answer, and cover letter.
-6. Copy the generated application answer or cover letter from the dashboard.
-7. Save the analysis to the application tracker with clear saving, success, and failure states.
-8. Avoid duplicate saves for the same result session after the analysis is saved.
-9. Track saved applications by company, role, match score, match level, and status.
+1. Upload a resume PDF or paste resume text manually.
+2. Review and edit the extracted resume text if needed.
+3. Paste an internship or job description.
+4. Set the application question, tone, answer word limit, and cover letter length.
+5. Click `Analyze`.
+6. Review the pipeline summary, large match score, score breakdown, grouped matched/missing skills, learning roadmap, application answer, and cover letter.
+7. Copy the generated application answer or cover letter from the dashboard.
+8. Save the analysis to the application tracker with clear saving, success, and failure states.
+9. Avoid duplicate saves for the same result session after the analysis is saved.
+10. Track saved applications by company, role, match score, match level, and status.
 
 The `Use Sample Data` button fills the form with a tested resume and job description so the full workflow can be tried quickly.
+
+The resume PDF upload uses the backend `POST /api/resume/upload` endpoint. The frontend sends the selected PDF as `multipart/form-data` with the field name `file`, receives `filename`, `text_length`, and `extracted_text`, and fills the resume textarea automatically. Non-PDF files are rejected in the browser, and upload failures show a clear message so the user can paste resume text manually.
+
+Typical resume upload workflow:
+
+1. Upload PDF.
+2. Backend extracts text with PyMuPDF.
+3. Frontend shows the uploaded filename and extracted character count.
+4. Frontend fills the resume text area.
+5. User edits the extracted text if needed.
+6. User runs the orchestrator analysis.
+
+PDF text extraction may not preserve the exact visual order of complex resume layouts, but the analyzer still uses the extracted content to identify useful profile details.
 
 The results dashboard is organized for portfolio demos:
 

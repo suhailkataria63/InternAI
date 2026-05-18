@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { analyzeApplication } from "../lib/api";
+import { analyzeApplication, uploadResumePdf } from "../lib/api";
 import type {
   AnalysisRequest,
   AnalysisResponse,
@@ -49,6 +49,9 @@ type AnalysisFormProps = {
 export default function AnalysisForm({ onResult }: AnalysisFormProps) {
   const [form, setForm] = useState<AnalysisRequest>(defaultForm);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [uploadError, setUploadError] = useState("");
   const [error, setError] = useState("");
 
   const updateField = <K extends keyof AnalysisRequest>(
@@ -68,6 +71,56 @@ export default function AnalysisForm({ onResult }: AnalysisFormProps) {
       cover_letter_length: "short",
     });
     setError("");
+    setUploadMessage("");
+    setUploadError("");
+  };
+
+  const handleResumeUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    setUploadMessage("");
+    setUploadError("");
+
+    if (!file) {
+      return;
+    }
+
+    const isPdf =
+      file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      setUploadError("Failed to extract resume text. Please paste resume text manually.");
+      event.target.value = "";
+      return;
+    }
+
+    setIsUploadingResume(true);
+    try {
+      const uploaded = await uploadResumePdf(file);
+      const extractedText = uploaded.extracted_text || "";
+      if (!extractedText.trim()) {
+        setUploadError("PDF uploaded, but no text could be extracted.");
+        return;
+      }
+
+      updateField("resume_text", extractedText);
+      setUploadMessage(
+        `Uploaded ${uploaded.filename || file.name} successfully. Extracted ${uploaded.text_length ?? extractedText.length} characters.`,
+      );
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to extract resume text. Please paste resume text manually.";
+      setUploadError(
+        message.includes("Could not reach")
+          ? message
+          : "Failed to extract resume text. Please paste resume text manually.",
+      );
+    } finally {
+      setIsUploadingResume(false);
+      event.target.value = "";
+    }
   };
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -113,15 +166,54 @@ export default function AnalysisForm({ onResult }: AnalysisFormProps) {
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <label className="block">
-          <span className="text-sm font-medium text-slate-800">Resume text</span>
-          <textarea
-            value={form.resume_text}
-            onChange={(event) => updateField("resume_text", event.target.value)}
-            className="mt-2 h-72 w-full resize-y rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm leading-6 outline-none transition focus:border-slate-500 focus:bg-white focus:ring-4 focus:ring-slate-100"
-            placeholder="Paste extracted resume text here..."
-          />
-        </label>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <label className="block">
+              <span className="text-sm font-medium text-slate-800">
+                Upload resume PDF
+              </span>
+              <span className="mt-1 block text-sm text-slate-600">
+                Upload a PDF to automatically extract resume text.
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-slate-500">
+                PDF text extraction may not preserve exact visual order, but the
+                analyzer will still use the extracted content.
+              </span>
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleResumeUpload}
+                disabled={isUploadingResume}
+                className="mt-3 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-950 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+              />
+            </label>
+            {isUploadingResume ? (
+              <p className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
+                Extracting resume text...
+              </p>
+            ) : null}
+            {uploadMessage ? (
+              <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                {uploadMessage}
+              </p>
+            ) : null}
+            {uploadError ? (
+              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {uploadError}
+              </p>
+            ) : null}
+          </div>
+
+          <label className="block">
+            <span className="text-sm font-medium text-slate-800">Resume text</span>
+            <textarea
+              value={form.resume_text}
+              onChange={(event) => updateField("resume_text", event.target.value)}
+              className="mt-2 h-72 w-full resize-y rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm leading-6 outline-none transition focus:border-slate-500 focus:bg-white focus:ring-4 focus:ring-slate-100"
+              placeholder="Paste extracted resume text here, or upload a PDF above..."
+            />
+          </label>
+        </div>
 
         <label className="block">
           <span className="text-sm font-medium text-slate-800">

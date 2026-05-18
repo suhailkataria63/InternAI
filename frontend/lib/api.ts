@@ -4,6 +4,7 @@ import type {
   ApplicationDetail,
   ApplicationListItem,
   ApplicationStatus,
+  ResumeUploadResponse,
 } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -15,6 +16,40 @@ export async function analyzeApplication(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function uploadResumePdf(file: File): Promise<ResumeUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/resume/upload`, {
+      method: "POST",
+      body: formData,
+    });
+  } catch {
+    throw new Error(
+      `Could not reach the InternAI backend at ${API_BASE_URL}. Make sure FastAPI is running before uploading a resume.`,
+    );
+  }
+
+  if (!response.ok) {
+    let message = "Failed to extract resume text. Please paste resume text manually.";
+    try {
+      const body = await response.json();
+      if (typeof body.detail === "string") {
+        message = body.detail;
+      } else if (body.detail?.message) {
+        message = body.detail.message;
+      }
+    } catch {
+      // Keep the upload-specific fallback message when the backend does not return JSON.
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<ResumeUploadResponse>;
 }
 
 export async function saveApplicationAnalysis(

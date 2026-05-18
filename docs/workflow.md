@@ -63,7 +63,10 @@ The Next.js frontend uses the orchestrator endpoint as its main API.
 
 | UI Step | Frontend Module | Backend API |
 | --- | --- | --- |
-| User enters resume, job description, tone, word limit, and cover letter length | `AnalysisForm` | None yet |
+| User selects a resume PDF | `AnalysisForm` | `POST /api/resume/upload` |
+| Backend returns extracted resume text | `uploadResumePdf` | Resume textarea is auto-filled |
+| User edits resume text or pastes manually | `AnalysisForm` | None yet |
+| User enters job description, tone, word limit, and cover letter length | `AnalysisForm` | None yet |
 | User clicks `Analyze` | `frontend/lib/api.ts` | `POST /api/orchestrator/analyze-application` |
 | Backend returns full pipeline output | `analyzeApplication` | Orchestrator response |
 | UI renders summary and score | `PipelineSummaryCard`, `MatchScoreCard` | Uses `pipeline_summary`, `match_result` |
@@ -79,6 +82,18 @@ The Next.js frontend uses the orchestrator endpoint as its main API.
 If the backend is not running, the frontend displays a clear connection error from the API client.
 
 After an orchestrator response, the results dashboard displays sections in this order: pipeline summary, match score, score breakdown, skills overview, skill gap roadmap, application answer, cover letter, and tracker save controls. Missing fields are rendered with fallback text so partial backend responses do not crash the UI.
+
+## Resume PDF Upload Flow
+
+1. User selects a PDF in the `Upload resume PDF` section.
+2. Frontend validates the selected file extension or MIME type before uploading.
+3. Frontend sends `multipart/form-data` to `POST /api/resume/upload` with field name `file`.
+4. Backend extracts text from the PDF and returns `filename`, `text_length`, and `extracted_text`.
+5. Frontend fills the resume textarea with `extracted_text`.
+6. User can manually edit the extracted text before clicking `Analyze`.
+7. Frontend shows the uploaded filename and extracted character count so the user can confirm extraction happened.
+8. PDF layout order may vary depending on the resume design, so the user can edit the extracted text before analysis.
+9. If upload fails or the backend is offline, the user sees a clear upload error and can paste resume text manually.
 
 ## Save-To-Tracker Workflow
 

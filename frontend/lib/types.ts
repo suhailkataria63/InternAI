@@ -10,6 +10,14 @@ export type AnalysisRequest = {
   cover_letter_length: CoverLetterLength;
 };
 
+export interface ResumeUploadResponse {
+  filename: string;
+  text_length: number;
+  extracted_text: string;
+  content_type?: string;
+  message?: string;
+}
+
 export type PipelineSummary = {
   candidate_name?: string;
   target_role?: string;
