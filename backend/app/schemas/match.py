@@ -16,3 +16,10 @@ class MatchScoreResponse(BaseModel):
     missing_skills: list[str] = Field(default_factory=list)
     project_relevance_notes: list[str] = Field(default_factory=list)
     recommendation: str = ""
+    score_breakdown: dict = Field(default_factory=dict)
+    required_skill_match_percentage: int = 0
+    preferred_skill_match_percentage: int = 0
+    matched_required_skills: list[str] = Field(default_factory=list)
+    missing_required_skills: list[str] = Field(default_factory=list)
+    matched_preferred_skills: list[str] = Field(default_factory=list)
+    missing_preferred_skills: list[str] = Field(default_factory=list)
