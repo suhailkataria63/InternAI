@@ -59,6 +59,8 @@ Before match scoring, job description text is normalized into a structured `job_
 
 Improved match scoring gives the Skill Gap Agent cleaner missing required and preferred skills, and gives the Application Tracker a more explainable score breakdown for saved opportunities.
 
+Before scoring, resume skills and JD skills are normalized into canonical names so variants such as `AI`/`Artificial Intelligence`, `NLP`/`Natural Language Processing`, `React.js`/`React`, and `Scikit-Learn`/`Scikit-learn` compare cleanly. Exact required-skill scoring stays conservative, while related evidence can still improve project relevance notes.
+
 Final writing output is generated from the cleaned `resume_profile`, structured `job_profile`, `match_result`, and `skill_gap_result`. The Application Writer and Cover Letter agents choose the strongest education entry, use concise project summaries, highlight matched skills, and frame missing skills as learning focus instead of claiming them as mastered.
 
 ## Frontend-To-Backend Workflow

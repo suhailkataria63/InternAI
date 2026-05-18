@@ -7,19 +7,53 @@ PROJECT_RELEVANCE_POINTS = 20
 EDUCATION_RELEVANCE_POINTS = 10
 EXPERIENCE_CERTIFICATION_POINTS = 10
 
-SKILL_ALIASES = {
-    "machine learning": {"machine learning", "ml", "ai/ml", "ai ml"},
-    "javascript": {"javascript", "js"},
-    "typescript": {"typescript", "ts"},
-    "next.js": {"next.js", "nextjs", "next js"},
-    "rest api": {"rest api", "rest", "api", "apis"},
-    "apis": {"apis", "api"},
-    "frontend development": {"frontend development", "frontend", "front-end"},
-    "backend development": {"backend development", "backend", "back-end"},
+CANONICAL_SKILLS = {
+    "Artificial Intelligence": {"ai", "artificial intelligence"},
+    "Machine Learning": {"ml", "machine learning", "ai/ml", "ai ml"},
+    "Deep Learning": {"dl", "deep learning"},
+    "NLP": {"nlp", "natural language processing", "natural language processing nlp"},
+    "React": {"react", "react.js", "reactjs"},
+    "Next.js": {"next", "next.js", "nextjs", "next js"},
+    "JavaScript": {"javascript", "js"},
+    "TypeScript": {"typescript", "ts"},
+    "REST API": {"rest api", "rest apis", "restful api", "rest"},
+    "API": {"api", "apis", "backend api"},
+    "FastAPI": {"fastapi", "fast api"},
+    "SQL": {"sql"},
+    "Docker": {"docker"},
+    "Git": {"git"},
+    "GitHub": {"github", "git hub"},
+    "Scikit-learn": {"scikit-learn", "scikit learn", "sklearn"},
+    "TensorFlow": {"tensorflow", "tensor flow"},
+    "Keras": {"keras"},
+    "Tailwind CSS": {"tailwind", "tailwind css"},
+    "HTML": {"html"},
+    "CSS": {"css"},
+    "EDA": {"eda", "exploratory data analysis", "exploratory data analysis eda"},
+    "Feature Engineering": {"feature engineering"},
+    "Data Preprocessing": {"data preprocessing", "preprocessing"},
+    "Data Science": {"data science"},
+    "Data Structures": {"data structures", "dsa"},
+    "Neural Networks": {"neural networks", "neural network"},
+    "Problem Solving": {"problem solving", "analytical thinking"},
+    "Communication": {"communication", "communication skills"},
+    "LangChain": {"langchain", "lang chain"},
+    "LangGraph": {"langgraph", "lang graph"},
+    "CrewAI": {"crewai", "crew ai"},
+    "RAG": {"rag", "retrieval augmented generation"},
+    "Node.js": {"node.js", "nodejs", "node js"},
+    "Django": {"django"},
+    "Flask": {"flask"},
+    "PostgreSQL": {"postgresql", "postgres"},
+    "SQLite": {"sqlite", "sqlite3"},
+    "Pandas": {"pandas"},
+    "NumPy": {"numpy", "num py"},
+    "Frontend Development": {"frontend development", "frontend", "front-end"},
+    "Backend Development": {"backend development", "backend", "back-end"},
 }
 
-FRONTEND_RELEVANT_SKILLS = {"react", "next.js", "javascript", "typescript", "html", "css", "tailwind css"}
-BACKEND_RELEVANT_SKILLS = {"fastapi", "django", "flask", "node.js", "rest api", "apis"}
+FRONTEND_RELEVANT_SKILLS = {"React", "Next.js", "JavaScript", "TypeScript", "HTML", "CSS", "Tailwind CSS"}
+BACKEND_RELEVANT_SKILLS = {"FastAPI", "Django", "Flask", "Node.js", "REST API", "API"}
 PROJECT_RELEVANCE_TERMS = {
     "ai",
     "ml",
@@ -105,17 +139,17 @@ def calculate_match_score(resume_profile: dict, job_profile: dict) -> dict:
 
 
 def normalize_skill(skill: str) -> str:
-    value = re.sub(r"\s+", " ", str(skill).lower()).strip()
-    value = value.replace("nextjs", "next.js")
-    value = value.replace("nodejs", "node.js")
-    value = value.replace("fast api", "fastapi")
-    value = value.replace("restful api", "rest api")
+    value = _comparison_key(skill)
+    if not value:
+        return ""
 
-    for canonical, aliases in SKILL_ALIASES.items():
-        if value in aliases:
+    for canonical, aliases in CANONICAL_SKILLS.items():
+        canonical_key = _comparison_key(canonical)
+        alias_keys = {_comparison_key(alias) for alias in aliases}
+        if value == canonical_key or value in alias_keys:
             return canonical
 
-    return value
+    return _fallback_display_skill(value)
 
 
 def normalize_list(items: list) -> list:
@@ -161,25 +195,14 @@ def skills_match(candidate_skill: str, required_skill: str) -> bool:
         return False
     if candidate == target:
         return True
-    if target in candidate or candidate in target:
-        return True
 
-    candidate_aliases = _skill_variants(candidate)
-    target_aliases = _skill_variants(target)
-    if candidate_aliases & target_aliases:
+    if target == "Frontend Development" and candidate in FRONTEND_RELEVANT_SKILLS:
         return True
-
-    if target == "frontend development" and candidate in FRONTEND_RELEVANT_SKILLS:
+    if candidate == "Frontend Development" and target in FRONTEND_RELEVANT_SKILLS:
         return True
-    if candidate == "frontend development" and target in FRONTEND_RELEVANT_SKILLS:
+    if target == "Backend Development" and candidate in BACKEND_RELEVANT_SKILLS:
         return True
-    if target == "backend development" and candidate in BACKEND_RELEVANT_SKILLS:
-        return True
-    if candidate == "backend development" and target in BACKEND_RELEVANT_SKILLS:
-        return True
-    if target == "rest api" and candidate in {"api", "apis"}:
-        return True
-    if candidate == "rest api" and target in {"api", "apis"}:
+    if candidate == "Backend Development" and target in BACKEND_RELEVANT_SKILLS:
         return True
 
     return False
@@ -242,7 +265,7 @@ def calculate_project_relevance_score(projects: list, job_profile: dict) -> tupl
 
     for project in projects:
         project_text = _project_to_display_text(project)
-        normalized_project_text = normalize_skill(project_text)
+        normalized_project_text = _normalize_search_text(project_text)
         project_score = 0
         reasons = []
 
@@ -256,6 +279,7 @@ def calculate_project_relevance_score(projects: list, job_profile: dict) -> tupl
             for skill in preferred_skills
             if _text_has_skill(normalized_project_text, skill)
         ]
+        related_evidence = _related_project_evidence(normalized_project_text, required_skills + preferred_skills)
         relevance_terms = [
             term
             for term in PROJECT_RELEVANCE_TERMS
@@ -268,6 +292,9 @@ def calculate_project_relevance_score(projects: list, job_profile: dict) -> tupl
         if matched_preferred:
             project_score += 4
             reasons.append(f"uses preferred skills: {', '.join(matched_preferred[:4])}")
+        if related_evidence:
+            project_score += 3
+            reasons.extend(related_evidence[:2])
         if relevance_terms:
             project_score += 4
             reasons.append(f"shows relevant domain signals: {', '.join(_display_skill(term) for term in relevance_terms[:4])}")
@@ -290,8 +317,8 @@ def calculate_education_score(education: list, job_profile: dict) -> tuple:
     if not education:
         return 0, "No education details found."
 
-    education_text = normalize_skill(" ".join(str(item) for item in education))
-    job_text = normalize_skill(
+    education_text = _normalize_search_text(" ".join(str(item) for item in education))
+    job_text = _normalize_search_text(
         " ".join(
             [
                 job_profile.get("role_title", ""),
@@ -337,7 +364,7 @@ def calculate_experience_score(experience: list, certifications: list, job_profi
     if not experience and not certifications:
         return 0, "No experience or certifications found."
 
-    combined_text = normalize_skill(
+    combined_text = _normalize_search_text(
         " ".join(str(item) for item in experience + certifications)
     )
     job_text = _job_context_text(job_profile)
@@ -404,16 +431,17 @@ def build_recommendation(score: int, missing_required: list, missing_preferred: 
 
 def _skill_variants(skill: str) -> set:
     normalized = normalize_skill(skill)
-    variants = {normalized}
-    for canonical, aliases in SKILL_ALIASES.items():
-        if normalized == canonical or normalized in aliases:
-            variants.add(canonical)
-            variants.update(aliases)
-    return variants
+    variants = {_comparison_key(normalized)}
+    aliases = CANONICAL_SKILLS.get(normalized, set())
+    variants.update(_comparison_key(alias) for alias in aliases)
+    return {variant for variant in variants if variant}
 
 
 def _text_has_skill(text: str, skill: str) -> bool:
-    return any(variant in text for variant in _skill_variants(skill))
+    return any(
+        re.search(rf"(?<![a-z0-9]){re.escape(variant)}(?![a-z0-9])", text)
+        for variant in _skill_variants(skill)
+    )
 
 
 def _job_context_text(job_profile: dict) -> str:
@@ -424,7 +452,7 @@ def _job_context_text(job_profile: dict) -> str:
         " ".join(job_profile.get("responsibilities", [])),
         " ".join(job_profile.get("keywords", [])),
     ]
-    return normalize_skill(" ".join(values))
+    return _normalize_search_text(" ".join(values))
 
 
 def _project_to_display_text(project) -> str:
@@ -470,32 +498,44 @@ def _important_words(value: str) -> list:
         "required",
         "preferred",
     }
-    words = re.findall(r"[a-z][a-z0-9.+#-]*", normalize_skill(value))
+    words = re.findall(r"[a-z][a-z0-9.+#-]*", _normalize_search_text(value))
     return [word for word in words if len(word) > 2 and word not in stop_words]
 
 
 def _display_skill(skill: str) -> str:
-    normalized = normalize_skill(skill)
+    return normalize_skill(skill)
+
+
+def _comparison_key(value: str) -> str:
+    text = re.sub(r"\([^)]*\)", " ", str(value or "").lower())
+    text = text.replace("&", " and ")
+    text = re.sub(r"[^a-z0-9+#.]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    compact = text.replace(" ", "")
+
+    compact_mappings = {
+        "reactjs": "react",
+        "nextjs": "next",
+        "nodejs": "node",
+        "fastapi": "fastapi",
+        "restapis": "rest apis",
+        "restfulapi": "restful api",
+        "scikitlearn": "scikit learn",
+        "tensorflow": "tensorflow",
+        "tailwindcss": "tailwind css",
+    }
+    return compact_mappings.get(compact, text)
+
+
+def _normalize_search_text(value: str) -> str:
+    text = str(value or "").lower()
+    text = text.replace("&", " and ")
+    text = re.sub(r"[^a-z0-9+#.]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _fallback_display_skill(value: str) -> str:
     special_cases = {
-        "ai": "AI",
-        "ml": "ML",
-        "ai/ml": "AI/ML",
-        "api": "API",
-        "apis": "APIs",
-        "css": "CSS",
-        "html": "HTML",
-        "sql": "SQL",
-        "nlp": "NLP",
-        "rag": "RAG",
-        "rest api": "REST API",
-        "fastapi": "FastAPI",
-        "next.js": "Next.js",
-        "node.js": "Node.js",
-        "javascript": "JavaScript",
-        "typescript": "TypeScript",
-        "sqlite": "SQLite",
-        "postgresql": "PostgreSQL",
-        "github": "GitHub",
         "b.tech": "B.Tech",
         "btech": "B.Tech",
         "3rd year": "3rd Year",
@@ -503,4 +543,22 @@ def _display_skill(skill: str) -> str:
         "6th semester": "6th Semester",
         "sixth semester": "6th Semester",
     }
-    return special_cases.get(normalized, normalized.title())
+    if value in special_cases:
+        return special_cases[value]
+    return " ".join(word.upper() if word in {"ai", "ml", "nlp", "api", "sql", "css", "html"} else word.capitalize() for word in value.split())
+
+
+def _related_project_evidence(project_text: str, target_skills: list) -> list:
+    notes = []
+    targets = {normalize_skill(skill) for skill in target_skills}
+
+    if "REST API" in targets and _text_has_skill(project_text, "FastAPI"):
+        notes.append("shows related backend API evidence through FastAPI")
+    if "API" in targets and any(_text_has_skill(project_text, skill) for skill in ("FastAPI", "REST API")):
+        notes.append("shows related API evidence")
+    if "JavaScript" in targets and _text_has_skill(project_text, "TypeScript"):
+        notes.append("shows related frontend language evidence through TypeScript")
+    if "GitHub" in targets and _text_has_skill(project_text, "Git"):
+        notes.append("shows related version-control evidence through Git")
+
+    return deduplicate_preserve_order(notes)

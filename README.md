@@ -343,7 +343,9 @@ Match levels:
 
 Input: a `resume_profile` object from the Resume Analyzer Agent and a `job_profile` object from the JD Analyzer Agent.
 
-Processing: the agent normalizes skills, applies simple aliases such as `ML` to `Machine Learning`, `JS` to `JavaScript`, `NextJS` to `Next.js`, and `REST` to `REST API`, calculates separate required and preferred skill overlap, checks project text against job keywords and responsibilities, and scores education, experience, and certifications with explainable notes.
+Processing: the agent normalizes skills into canonical display names, applies synonym matching such as `AI` to `Artificial Intelligence`, `NLP` to `Natural Language Processing`, `React.js` to `React`, `Scikit-Learn` to `Scikit-learn`, and `REST APIs` to `REST API`, calculates separate required and preferred skill overlap, checks project text against job keywords and responsibilities, and scores education, experience, and certifications with explainable notes.
+
+Skill matching is intentionally conservative for exact required-skill credit: `TypeScript` does not automatically satisfy `JavaScript`, `GitHub` does not automatically satisfy `Git`, and `FastAPI` does not automatically satisfy `REST API`. Those relationships can still appear as related project evidence, for example `Project shows related backend API evidence through FastAPI.`
 
 Output: a score, match level, matched skills, missing skills, project relevance notes, a practical recommendation, and a `score_breakdown` with separate required/preferred match percentages.
 

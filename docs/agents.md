@@ -205,9 +205,13 @@ Match levels:
 Internal logic:
 
 - Normalizes resume skills and job skills for case-insensitive comparison.
-- Supports common aliases such as `ML` and `AI/ML` for `Machine Learning`, `JS` for `JavaScript`, `TS` for `TypeScript`, `NextJS` for `Next.js`, and `REST` for `REST API`.
+- Normalizes resume skills and job skills into canonical display names before scoring.
+- Supports synonym matching such as `AI` and `Artificial Intelligence`, `ML` and `Machine Learning`, `NLP` and `Natural Language Processing`, `React.js` and `React`, `NextJS` and `Next.js`, `REST APIs` and `REST API`, `Scikit-Learn` and `Scikit-learn`, plus common casing fixes such as `JavaScript`, `TypeScript`, `LangChain`, and `REST API`.
+- Keeps exact required-skill matching conservative: `TypeScript` does not automatically satisfy `JavaScript`, `GitHub` does not automatically satisfy `Git`, and `FastAPI` does not automatically satisfy `REST API`.
+- Uses related evidence only for project relevance notes, such as treating FastAPI as backend API evidence when the JD asks for REST API experience.
 - Treats frontend/backend category skills as relevant to concrete skills such as React, Next.js, FastAPI, Django, and Flask.
 - Scores required skills separately from preferred skills and returns separate matched/missing lists for each group.
+- Preserves JD skill order in matched and missing required/preferred lists while removing duplicates.
 - Gives a neutral 25/45 required-skill score when the job description has no explicit required skills.
 - Gives full preferred-skill points when no preferred skills are listed because preferred skills are optional.
 - Checks resume project names, descriptions, and technologies against required skills, preferred skills, responsibilities, role title, and domain terms such as AI, ML, backend, frontend, API, dashboard, data, model, NLP, RAG, agent, and deployment.
