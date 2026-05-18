@@ -36,15 +36,20 @@ Output:
 Internal logic:
 
 - Normalizes raw resume text into clean lines.
+- Detects resume sections including `SUMMARY`, `SUMMARY OF QUALIFICATIONS`, `PROJECTS`, `RELEVANT PROJECT EXPERIENCE`, `TECHNICAL SKILLS`, `EDUCATION`, and `CERTIFICATIONS`.
 - Extracts email and phone with regular expressions.
 - Extracts candidate name from `Name:` labels, first meaningful lines, and phrases such as `I am...`, `My name is...`, and `Suhail Kataria is pursuing...`.
 - Avoids using degree names, project names, section headings, and skill names as candidate names.
 - Detects education from section headings and paragraph keywords such as `B.Tech`, `Bachelor`, `Artificial Intelligence`, `Data Science`, `AI&DS`, `3rd Year`, `6th Semester`, `CGC Landran`, `Chandigarh Group of Colleges`, and `IKGPTU`.
-- Cleans education entries by stopping before resume-content phrases such as `Skills include`, `Projects include`, `Another project`, and `Experience includes`, then caps long education entries before they reach writer agents.
+- Cleans education entries by reading the `EDUCATION` section first and stopping before resume-content phrases such as `Skills include`, `Projects include`, `Another project`, `Experience includes`, `TECHNICAL SKILLS`, and `SUMMARY OF QUALIFICATIONS`, then caps long education entries before they reach writer agents.
 - Detects expanded technical skills including Python, JavaScript, TypeScript, React, Next.js, Node.js, FastAPI, Django, Flask, Machine Learning, Deep Learning, NLP, SQL, PostgreSQL, SQLite, Pandas, NumPy, Scikit-learn, TensorFlow, PyTorch, LangChain, LangGraph, CrewAI, RAG, AI Agents, Docker, Git, GitHub, REST API, Tailwind CSS, HTML, and CSS.
-- Extracts projects from sections, bullet-style lines, and paragraph phrases such as `Projects include...`, `Project: ...`, and `Another project is...`.
+- Normalizes common skill variants such as `React.js` to `React`, `Scikit-Learn` to `Scikit-learn`, `TensorFlow/Keras` to `TensorFlow` and `Keras`, `Exploratory Data Analysis (EDA)` to `EDA`, and `Natural Language Processing` to `NLP`.
+- Extracts projects from `PROJECTS` and `RELEVANT PROJECT EXPERIENCE` sections while ignoring section headings, dates, skills categories, education lines, contact lines, and summary paragraphs.
+- Uses project-title heuristics so short title-like lines such as `Hybrid Phishing Detection System`, `Demand Forecasting using Time Series Analysis`, `YouTube View Prediction Model`, and `Deep Learning Sentiment Analysis Model` become project names.
+- Associates following bullet or description lines with the best matching project using project keywords and title overlap.
+- Handles PDF extraction order issues by attaching opening project-like lines to a matching project title when the PDF text begins with project bullets before the candidate header.
 - Returns projects as structured objects with `name`, `description`, and `technologies`.
-- Extracts experience from phrases like `Experience includes AI Intern at Unified Mentor`, `AI Intern at...`, `Internship at...`, and `Worked as...`.
+- Extracts experience only from explicit `EXPERIENCE`, `WORK EXPERIENCE`, `INTERNSHIP`, or `INTERNSHIPS` sections so project bullets do not become fake work experience.
 - Extracts certifications from certification-related keywords and providers such as Coursera, Udemy, Google, Microsoft, IBM, AWS, and EC-Council.
 - Builds strengths and improvement areas based on actual extracted profile evidence.
 - Stores an LLM-ready prompt template for future LangChain or LangGraph integration.
@@ -54,8 +59,9 @@ Current limitations:
 - The agent is rule-based and does not deeply understand resume context yet.
 - Name detection works best when the candidate name appears near the top of the resume.
 - Skills are detected from a curated keyword list and may miss uncommon tools.
-- Paragraph extraction is stronger than before, but unusual grammar can still produce partial results.
+- Section-aware extraction is stronger than before, but unusual resume layouts can still produce partial results.
 - Project descriptions are inferred from nearby text and may need human cleanup.
+- PDF extraction order can vary by resume design; the analyzer applies cleanup heuristics, but users may still edit extracted text before analysis.
 - The agent does not yet score resume quality or tailor content for a specific internship.
 
 Future improvements:

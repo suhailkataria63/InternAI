@@ -181,7 +181,9 @@ The Resume Analyzer Agent receives raw text, usually from the resume PDF upload 
 
 Input: raw resume text in the `resume_text` field.
 
-Processing: the current implementation uses improved rule-based extraction for labels, section headings, and paragraph-style text. It detects names from `Name:` labels, first meaningful lines, and phrases such as `Suhail Kataria is pursuing...`; detects education keywords like `B.Tech`, `AI&DS`, `CGC Landran`, and `IKGPTU`; cleans education entries so full resume paragraphs do not flow into downstream writing; extracts expanded technical skills; detects projects from bullet lines and phrases like `Projects include...`; and returns projects as structured objects with `name`, `description`, and `technologies`.
+Processing: the current implementation uses improved rule-based extraction for labels, section headings, and paragraph-style text. It detects names from `Name:` labels, first meaningful lines, and phrases such as `Suhail Kataria is pursuing...`; detects resume sections such as `SUMMARY`, `RELEVANT PROJECT EXPERIENCE`, `TECHNICAL SKILLS`, `EDUCATION`, and `CERTIFICATIONS`; cleans education entries so summary paragraphs and skills categories do not flow into downstream writing; normalizes skills such as `React.js` to `React`, `Scikit-Learn` to `Scikit-learn`, `TensorFlow/Keras` to `TensorFlow` and `Keras`, `Natural Language Processing` to `NLP`, and `Exploratory Data Analysis (EDA)` to `EDA`; and returns projects as structured objects with `name`, `description`, and `technologies`.
+
+Project extraction now prefers the projects section, ignores section headings such as `RELEVANT PROJECT EXPERIENCE`, avoids treating summary paragraphs as projects, and can attach opening PDF-extracted project bullets to the matching project title when PDF layout order places descriptions before the header. Experience extraction is intentionally conservative: if no `EXPERIENCE` or `WORK EXPERIENCE` section exists, it does not create fake work experience from project bullets.
 
 Output: a normalized `profile` object that can be reused by future Profile, Opportunity, Resume, and Interview agents.
 
@@ -191,18 +193,25 @@ Example extracted resume profile:
 {
   "name": "Suhail Kataria",
   "education": [
-    "B.Tech in Artificial Intelligence and Data Science at CGC Landran under IKGPTU"
+    "B.Tech — Artificial Intelligence & Data Science, Chandigarh Group of Colleges (CGC), Landran Currently Pursuing",
+    "Diploma — Computer Science & Engineering, PSBTE",
+    "Class X — CBSE"
   ],
-  "skills": ["Python", "React", "FastAPI", "Machine Learning", "SQL"],
+  "skills": ["Python", "React", "Next.js", "Machine Learning", "NLP", "EDA", "SQL"],
   "projects": [
     {
       "name": "Hybrid Phishing Detection System",
-      "description": "Hybrid Phishing Detection System using Python, Machine Learning and React",
-      "technologies": ["Python", "React", "Machine Learning"]
+      "description": "Developed a phishing detection model (94% accuracy) using hybrid AI and ML approaches. Built a frontend dashboard using Next.js, React, TypeScript, and Tailwind CSS.",
+      "technologies": ["Python", "Machine Learning", "AI", "Next.js", "React", "TypeScript", "Tailwind CSS"]
+    },
+    {
+      "name": "Demand Forecasting using Time Series Analysis",
+      "description": "Built a time-series forecasting model to predict future demand trends.",
+      "technologies": ["Python", "Time-Series Forecasting", "Machine Learning", "EDA", "Feature Engineering"]
     }
   ],
-  "experience": ["AI Intern at Unified Mentor"],
-  "certifications": ["Google Data Analytics Certificate from Coursera"]
+  "experience": [],
+  "certifications": ["AI Agent Developer - Vanderbilt University", "Generative AI Leader - Google"]
 }
 ```
 

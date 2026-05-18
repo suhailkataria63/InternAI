@@ -39,9 +39,18 @@ SKILL_ALIASES = {
     "Django": ("django",),
     "Flask": ("flask",),
     "Machine Learning": ("machine learning", "ml"),
+    "AI": ("ai", "artificial intelligence"),
     "Deep Learning": ("deep learning", "dl"),
     "NLP": ("nlp", "natural language processing"),
     "Data Analysis": ("data analysis", "data analytics"),
+    "Data Cleaning": ("data cleaning",),
+    "Data Preprocessing": ("data preprocessing",),
+    "Feature Engineering": ("feature engineering",),
+    "EDA": ("exploratory data analysis", "eda"),
+    "Regression": ("regression",),
+    "Classification": ("classification",),
+    "Predictive Modeling": ("predictive modeling",),
+    "Time-Series Forecasting": ("time-series forecasting", "time series forecasting", "time-series", "time series"),
     "SQL": ("sql",),
     "PostgreSQL": ("postgresql", "postgres"),
     "SQLite": ("sqlite", "sqlite3"),
@@ -49,6 +58,7 @@ SKILL_ALIASES = {
     "NumPy": ("numpy", "num py"),
     "Scikit-learn": ("scikit-learn", "scikit learn", "sklearn"),
     "TensorFlow": ("tensorflow",),
+    "Keras": ("keras",),
     "PyTorch": ("pytorch", "torch"),
     "LangChain": ("langchain",),
     "LangGraph": ("langgraph",),
@@ -62,12 +72,16 @@ SKILL_ALIASES = {
     "Tailwind CSS": ("tailwind css", "tailwind"),
     "HTML": ("html",),
     "CSS": ("css",),
+    "Neural Networks": ("neural networks", "neural network"),
+    "Sentiment Analysis": ("sentiment analysis",),
+    "Text Processing": ("text processing", "text preprocessing", "tokenization"),
 }
 
 SECTION_HEADERS = {
+    "summary": ("summary", "summary of qualifications", "profile", "professional summary"),
     "education": ("education", "academic background", "academics"),
-    "skills": ("skills", "technical skills", "core skills", "technologies"),
-    "projects": ("projects", "academic projects", "personal projects"),
+    "skills": ("skills", "technical skills", "core skills", "technologies", "technical skills"),
+    "projects": ("projects", "academic projects", "personal projects", "relevant project experience", "project experience"),
     "experience": ("experience", "work experience", "internship", "internships"),
     "certifications": ("certifications", "certificates", "licenses"),
 }
@@ -87,6 +101,14 @@ EDUCATION_KEYWORDS = (
     "cgc landran",
     "chandigarh group of colleges",
     "ikgptu",
+    "diploma",
+    "computer science",
+    "engineering",
+    "psbte",
+    "cbse",
+    "class x",
+    "class 10",
+    "currently pursuing",
 )
 
 CERTIFICATION_KEYWORDS = (
@@ -113,22 +135,73 @@ NAME_BLOCKLIST = {
     "certifications",
 }
 
+PROJECT_TITLE_KEYWORDS = (
+    "system",
+    "analysis",
+    "model",
+    "modeling",
+    "dashboard",
+    "application",
+    "platform",
+    "tool",
+    "api",
+    "website",
+    "prediction",
+    "forecasting",
+    "detection",
+)
+
+SUMMARY_PHRASES = (
+    "student with",
+    "solid foundation",
+    "experienced in developing",
+    "skilled in",
+    "passionate about",
+    "summary of qualifications",
+)
+
+SKILL_CATEGORY_PREFIXES = (
+    "programming languages",
+    "frontend development",
+    "backend development",
+    "data science",
+    "machine learning",
+    "deep learning",
+    "libraries & tools",
+    "tools",
+)
+
+DESCRIPTION_ACTION_VERBS = (
+    "built",
+    "conducted",
+    "generated",
+    "performed",
+    "implemented",
+    "developed",
+    "classified",
+    "deployed",
+    "created",
+    "designed",
+    "trained",
+)
+
 
 def analyze_resume_text(resume_text: str) -> dict:
     """Analyze raw resume text and return a structured candidate profile."""
     cleaned_text = clean_text(resume_text)
-    lines = split_lines(cleaned_text)
-    skills = extract_skills(cleaned_text)
+    lines = normalize_resume_lines(cleaned_text)
+    sections = detect_resume_sections(lines)
+    skills = extract_skills(cleaned_text, sections)
 
     profile = {
         "name": extract_name(cleaned_text, lines),
         "email": extract_email(cleaned_text),
         "phone": extract_phone(cleaned_text),
-        "education": extract_education(cleaned_text, lines),
+        "education": extract_education(cleaned_text, lines, sections),
         "skills": skills,
-        "projects": extract_projects(cleaned_text, lines, skills),
-        "experience": extract_experience(cleaned_text, lines),
-        "certifications": extract_certifications(cleaned_text, lines),
+        "projects": extract_projects(cleaned_text, lines, sections, skills),
+        "experience": extract_experience(cleaned_text, lines, sections),
+        "certifications": extract_certifications(cleaned_text, lines, sections),
         "strengths": [],
         "improvement_areas": [],
     }
@@ -152,6 +225,46 @@ def clean_text(text: str) -> str:
 
 def split_lines(text: str) -> list:
     return [line.strip(" -•\t") for line in text.splitlines() if line.strip(" -•\t")]
+
+
+def normalize_resume_lines(text: str) -> list:
+    """Return clean resume lines while preserving useful punctuation."""
+    normalized_lines = []
+    seen = set()
+
+    for raw_line in text.splitlines():
+        line = re.sub(r"\s+", " ", raw_line).strip(" -•\t")
+        line = re.sub(r"^[\u2022*\-]+\s*", "", line).strip()
+        if not line:
+            continue
+
+        key = line.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized_lines.append(line)
+
+    return normalized_lines
+
+
+def detect_resume_sections(lines: list) -> dict:
+    """Group lines under known resume section headings."""
+    sections = {section_name: [] for section_name in SECTION_HEADERS}
+    active_section = ""
+
+    for line in lines:
+        header = _header_for(line)
+        if header:
+            active_section = header
+            remainder = _after_colon(line)
+            if remainder:
+                sections[active_section].append(remainder)
+            continue
+
+        if active_section:
+            sections[active_section].append(line)
+
+    return sections
 
 
 def extract_name(text: str, lines: list) -> str:
@@ -193,12 +306,14 @@ def extract_phone(text: str) -> str:
     return match.group(0).strip() if match else ""
 
 
-def extract_education(text: str, lines: list) -> list:
-    education_items = _section_items(lines, "education")
+def extract_education(text: str, lines: list, sections: dict | None = None) -> list:
+    section_lines = (sections or {}).get("education") or _section_items(lines, "education")
+    education_items = _education_items_from_section(section_lines)
 
-    for line in lines:
-        if _contains_any(line, EDUCATION_KEYWORDS):
-            education_items.append(line)
+    if not education_items:
+        for line in lines:
+            if _contains_any(line, EDUCATION_KEYWORDS):
+                education_items.append(line)
 
     phrase_patterns = (
         r"pursuing\s+([^.\n]*(?:b\.?tech|bachelor|artificial intelligence|data science|ai&ds|ai and ds)[^.\n]*)",
@@ -217,7 +332,7 @@ def extract_education(text: str, lines: list) -> list:
     return _unique_preserve_order(_clean_items(cleaned_items))
 
 
-def extract_skills(text: str) -> list:
+def extract_skills(text: str, sections: dict | None = None) -> list:
     lowered_text = text.lower()
     found_skills = []
 
@@ -227,7 +342,7 @@ def extract_skills(text: str) -> list:
                 found_skills.append(display_name)
                 break
 
-    skill_lines = _section_items(split_lines(text), "skills")
+    skill_lines = (sections or {}).get("skills") or _section_items(normalize_resume_lines(text), "skills")
     for line in skill_lines:
         for part in re.split(r"[,|;/]", line):
             candidate = part.strip()
@@ -238,49 +353,25 @@ def extract_skills(text: str) -> list:
     return _unique_preserve_order(found_skills)
 
 
-def extract_projects(text: str, lines: list, skills: list) -> list:
-    project_chunks = _section_items(lines, "projects")
+def extract_projects(text: str, lines: list, sections: dict | None = None, skills: list | None = None) -> list:
+    skills = skills or extract_skills(text, sections)
+    project_lines = (sections or {}).get("projects") or _section_items(lines, "projects")
+    projects = _projects_from_section(project_lines, skills)
 
-    phrase_patterns = (
-        r"projects?\s+include\s+([^.\n]+)",
-        r"project\s*:\s*([^.\n]+)",
-        r"another\s+project\s+is\s+([^.\n]+)",
-    )
-    for pattern in phrase_patterns:
-        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
-            project_chunks.extend(_split_project_chunk(match.group(1)))
+    if not projects:
+        projects = _projects_from_phrases(text, skills)
 
-    for line in lines:
-        lowered = line.lower()
-        if (
-            (" project" in lowered or lowered.startswith("project"))
-            and not _is_section_header(line)
-            and not re.search(
-                r"projects?\s+include|another\s+project\s+is|project\s*:",
-                line,
-                flags=re.IGNORECASE,
-            )
-        ):
-            project_chunks.extend(_split_project_chunk(line))
-
-    projects = []
-    for chunk in _clean_items(project_chunks):
-        name = _extract_project_name(chunk)
-        if not name:
-            continue
-        projects.append(
-            {
-                "name": name,
-                "description": chunk,
-                "technologies": _skills_in_text(chunk, skills),
-            }
-        )
+    opening_lines = _opening_project_block(lines)
+    if opening_lines and projects:
+        _attach_opening_block_to_project(projects, opening_lines, skills)
 
     return _unique_projects(projects)
 
 
-def extract_experience(text: str, lines: list) -> list:
-    experience_items = _section_items(lines, "experience")
+def extract_experience(text: str, lines: list, sections: dict | None = None) -> list:
+    experience_items = (sections or {}).get("experience") or _section_items(lines, "experience")
+    if not experience_items:
+        return []
 
     patterns = (
         r"experience\s+includes\s+([^.\n]+)",
@@ -292,7 +383,7 @@ def extract_experience(text: str, lines: list) -> list:
         for match in re.finditer(pattern, text, flags=re.IGNORECASE):
             experience_items.append(match.group(1).strip())
 
-    for line in lines:
+    for line in experience_items:
         if re.search(r"\b(intern|internship|worked as|work experience)\b", line, re.IGNORECASE) and not re.search(
             r"experience\s+includes|internship\s+at|worked\s+as",
             line,
@@ -303,8 +394,8 @@ def extract_experience(text: str, lines: list) -> list:
     return _dedupe_contained_items(_unique_preserve_order(_clean_items(experience_items)))
 
 
-def extract_certifications(text: str, lines: list) -> list:
-    certification_items = _section_items(lines, "certifications")
+def extract_certifications(text: str, lines: list, sections: dict | None = None) -> list:
+    certification_items = (sections or {}).get("certifications") or _section_items(lines, "certifications")
 
     for line in lines:
         if _contains_any(line, CERTIFICATION_KEYWORDS):
@@ -382,6 +473,278 @@ def _section_items(lines: list, section_name: str) -> list:
     return items
 
 
+def _education_items_from_section(section_lines: list) -> list:
+    education_items = []
+    current_item = []
+
+    for line in section_lines:
+        if _is_section_header(line) or _is_date_line(line):
+            continue
+
+        if _is_primary_education_line(line):
+            if current_item:
+                education_items.append(" ".join(current_item))
+            current_item = [line]
+            continue
+
+        if current_item and _is_education_detail_line(line):
+            current_item.append(line)
+            continue
+
+        if current_item:
+            education_items.append(" ".join(current_item))
+            current_item = []
+
+    if current_item:
+        education_items.append(" ".join(current_item))
+
+    return education_items
+
+
+def _is_primary_education_line(line: str) -> bool:
+    lowered = line.lower()
+    return any(
+        keyword in lowered
+        for keyword in (
+            "b.tech",
+            "btech",
+            "bachelor",
+            "diploma",
+            "class x",
+            "class 10",
+            "cbse",
+            "computer science",
+        )
+    )
+
+
+def _is_education_detail_line(line: str) -> bool:
+    lowered = line.lower()
+    return any(
+        keyword in lowered
+        for keyword in (
+            "artificial intelligence",
+            "data science",
+            "chandigarh group",
+            "cgc",
+            "landran",
+            "ikgptu",
+            "psbte",
+            "currently pursuing",
+            "engineering",
+            "semester",
+            "year",
+        )
+    )
+
+
+def _projects_from_section(project_lines: list, skills: list) -> list:
+    projects = []
+    title_indexes = []
+
+    for index, line in enumerate(project_lines):
+        if _is_project_title_line(line):
+            title_indexes.append(index)
+            projects.append({"name": line.strip(" -•\t."), "description": "", "technologies": []})
+
+    if not projects:
+        return []
+
+    project_descriptions = {project["name"]: [] for project in projects}
+    current_title = ""
+
+    for index, line in enumerate(project_lines):
+        if index in title_indexes:
+            current_title = project_lines[index].strip(" -•\t.")
+            continue
+        if _should_skip_project_line(line):
+            continue
+
+        best_project = _best_project_for_description(line, projects)
+        if best_project:
+            project_descriptions[best_project["name"]].append(line)
+        elif current_title:
+            project_descriptions[current_title].append(line)
+
+    for project in projects:
+        description = " ".join(project_descriptions.get(project["name"], []))
+        project["description"] = description or project["name"]
+        project["technologies"] = _project_technologies(project["name"], project["description"], skills)
+
+    return projects
+
+
+def _projects_from_phrases(text: str, skills: list) -> list:
+    project_chunks = []
+    phrase_patterns = (
+        r"projects?\s+include\s+([^.\n]+)",
+        r"project\s*:\s*([^.\n]+)",
+        r"another\s+project\s+is\s+([^.\n]+)",
+    )
+    for pattern in phrase_patterns:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            project_chunks.extend(_split_project_chunk(match.group(1)))
+
+    projects = []
+    for chunk in _clean_items(project_chunks):
+        name = _extract_project_name(chunk)
+        if not name or _should_skip_project_line(name):
+            continue
+        projects.append(
+            {
+                "name": name,
+                "description": chunk,
+                "technologies": _project_technologies(name, chunk, skills),
+            }
+        )
+
+    return projects
+
+
+def _is_project_title_line(line: str) -> bool:
+    raw_cleaned = re.sub(r"\s+", " ", line).strip(" -•\t")
+    cleaned = raw_cleaned.strip(".")
+    lowered = cleaned.lower()
+
+    if _should_skip_project_line(cleaned):
+        return False
+    if raw_cleaned.endswith(".") or len(cleaned) > 90:
+        return False
+    if lowered.split(" ", 1)[0] in DESCRIPTION_ACTION_VERBS:
+        return False
+    if _contains_any(cleaned, EDUCATION_KEYWORDS):
+        return False
+
+    words = cleaned.split()
+    if not 2 <= len(words) <= 9:
+        return False
+
+    has_project_keyword = any(keyword in lowered for keyword in PROJECT_TITLE_KEYWORDS)
+    title_like_words = sum(1 for word in words if word[:1].isupper() or word.lower() in {"using", "and", "of"})
+    return has_project_keyword or title_like_words >= max(2, len(words) - 1)
+
+
+def _should_skip_project_line(line: str) -> bool:
+    lowered = line.lower().strip(" :-")
+    if not lowered:
+        return True
+    if _is_section_header(line) or _is_date_line(line):
+        return True
+    if any(lowered == prefix or lowered.startswith(prefix + ":") for prefix in SKILL_CATEGORY_PREFIXES):
+        return True
+    if any(phrase in lowered for phrase in SUMMARY_PHRASES):
+        return True
+    if "@" in lowered or "linkedin.com" in lowered or "github.com" in lowered:
+        return True
+    if re.fullmatch(r"\d+", lowered):
+        return True
+    return False
+
+
+def _opening_project_block(lines: list) -> list:
+    opening_lines = []
+
+    for line in lines[:12]:
+        if _looks_like_person_name(line) or _is_section_header(line):
+            break
+        if _should_skip_project_line(line):
+            continue
+        opening_lines.append(line)
+
+    opening_text = " ".join(opening_lines).lower()
+    project_signals = (
+        "phishing",
+        "detection",
+        "model",
+        "dashboard",
+        "next.js",
+        "react",
+        "tailwind",
+        "vercel",
+        "huggingface",
+        "hugging face",
+        "deployed",
+    )
+    if len(opening_lines) >= 2 and any(signal in opening_text for signal in project_signals):
+        return opening_lines
+    return []
+
+
+def _attach_opening_block_to_project(projects: list, opening_lines: list, skills: list) -> None:
+    opening_text = " ".join(opening_lines)
+    best_project = _best_project_for_description(opening_text, projects)
+    if not best_project:
+        return
+
+    existing_description = best_project.get("description", "")
+    if opening_text.lower() not in existing_description.lower():
+        best_project["description"] = f"{opening_text} {existing_description}".strip()
+    best_project["technologies"] = _project_technologies(
+        best_project["name"],
+        best_project["description"],
+        skills,
+    )
+
+
+def _best_project_for_description(description: str, projects: list) -> dict:
+    description_tokens = _meaningful_tokens(description)
+    lowered = description.lower()
+    best_project = {}
+    best_score = 0
+
+    project_keyword_groups = {
+        "phishing": ("phishing", "url", "email", "dashboard", "next.js", "react", "tailwind", "vercel", "hugging"),
+        "demand": ("demand", "forecast", "time-series", "time series", "mape", "planning"),
+        "youtube": ("youtube", "video", "views", "engagement", "metadata", "regression"),
+        "sentiment": ("sentiment", "nlp", "text", "tokenization", "neural", "positive", "negative", "neutral"),
+    }
+
+    for project in projects:
+        name = project["name"]
+        name_tokens = _meaningful_tokens(name)
+        score = len(description_tokens & name_tokens)
+        for title_signal, keywords in project_keyword_groups.items():
+            if title_signal in name.lower() and any(keyword in lowered for keyword in keywords):
+                score += 4
+        if score > best_score:
+            best_score = score
+            best_project = project
+
+    return best_project if best_score > 0 else {}
+
+
+def _meaningful_tokens(value: str) -> set:
+    stop_words = {"using", "with", "and", "the", "for", "model", "system", "analysis"}
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", value.lower())
+        if len(token) > 2 and token not in stop_words
+    }
+
+
+def _project_technologies(name: str, description: str, skills: list) -> list:
+    project_text = f"{name} {description}"
+    technologies = _skills_in_text(project_text, skills)
+    lowered = project_text.lower()
+
+    if "python" in {skill.lower() for skill in skills} and any(
+        keyword in lowered for keyword in ("machine learning", "time-series", "time series", "nlp", "data", "model")
+    ):
+        technologies.append("Python")
+
+    return _unique_preserve_order(technologies)
+
+
+def _is_date_line(line: str) -> bool:
+    return bool(
+        re.search(
+            r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)[a-z]*\s+\d{4}\s*[-–]\s*(?:present|(?:jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)[a-z]*\s+\d{4})\b",
+            line,
+            flags=re.IGNORECASE,
+        )
+    )
+
+
 def _header_for(line: str) -> str:
     normalized = line.lower().strip().rstrip(":")
     for section_name, aliases in SECTION_HEADERS.items():
@@ -407,7 +770,10 @@ def _looks_like_person_name(value: str) -> bool:
         return False
     if any(char.isdigit() for char in value) or "@" in value:
         return False
-    if _contains_any(value, EDUCATION_KEYWORDS) or _contains_any(value, SKILL_ALIASES.keys()):
+    if _contains_any(value, EDUCATION_KEYWORDS):
+        return False
+    skill_names = {skill.lower() for skill in SKILL_ALIASES if len(skill) > 3}
+    if lowered in skill_names:
         return False
     if any(word in lowered for word in ("project", "system", "dashboard", "intern", "developer")):
         return False
@@ -430,6 +796,9 @@ def _clean_education_item(value: str) -> str:
         "projects include",
         "another project",
         "experience includes",
+        "technical skills",
+        "summary of qualifications",
+        "relevant project experience",
         "he has skills",
         "she has skills",
         "i have skills",
@@ -477,7 +846,12 @@ def _skill_display_name(candidate: str) -> str:
 
 def _skills_in_text(text: str, skills: list) -> list:
     lowered = text.lower()
-    return [skill for skill in skills if skill.lower() in lowered]
+    matched_skills = []
+    for skill in skills:
+        aliases = SKILL_ALIASES.get(skill, (skill.lower(),))
+        if any(_skill_alias_found(lowered, alias) for alias in aliases):
+            matched_skills.append(skill)
+    return _unique_preserve_order(matched_skills)
 
 
 def _split_project_chunk(chunk: str) -> list:

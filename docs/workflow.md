@@ -5,7 +5,7 @@
 1. User creates or imports an internship profile.
 2. InternAI identifies target roles, skills, preferences, and constraints.
 3. User uploads a resume PDF, and the backend extracts raw text.
-4. Resume Analyzer Agent converts resume text into a structured profile, including improved paragraph-style extraction for name, education, skills, projects, experience, and certifications.
+4. Resume Analyzer Agent converts resume text into a structured profile, including section-aware extraction for name, education, skills, projects, experience, and certifications.
 5. User pastes an internship or job description.
 6. JD Analyzer Agent converts the description into a structured job profile with cleaner role/company extraction and clearer required/preferred skill separation.
 7. Match Scoring Agent compares both profiles and returns a weighted fit score, score breakdown, missing required/preferred skills, project relevance notes, and a recommendation.
@@ -51,7 +51,7 @@ The orchestrator endpoint accepts raw `resume_text` and `job_description`, then 
 | 6 | Cover Letter Agent | `resume_profile`, `job_profile`, `match_result`, `skill_gap_result` | `cover_letter` |
 | 7 | Orchestrator Service | core agent outputs | `pipeline_summary` |
 
-Improved resume extraction strengthens every downstream agent because match scoring, skill-gap planning, application answers, cover letters, and tracker summaries all reuse `resume_profile`.
+Improved resume extraction strengthens every downstream agent because match scoring, skill-gap planning, application answers, cover letters, and tracker summaries all reuse `resume_profile`. The analyzer now separates resume sections, ignores headings such as `RELEVANT PROJECT EXPERIENCE` as project names, cleans education entries, normalizes common skill variants, and keeps project bullets from being misclassified as work experience.
 
 Improved JD parsing strengthens match scoring and skill-gap priority because required skills drive higher score weight and High-priority learning gaps, while preferred-only skills remain Medium priority.
 
@@ -95,7 +95,8 @@ After an orchestrator response, the results dashboard displays sections in this 
 6. User can manually edit the extracted text before clicking `Analyze`.
 7. Frontend shows the uploaded filename and extracted character count so the user can confirm extraction happened.
 8. PDF layout order may vary depending on the resume design, so the user can edit the extracted text before analysis.
-9. If upload fails or the backend is offline, the user sees a clear upload error and can paste resume text manually.
+9. The Resume Analyzer applies cleanup heuristics for PDF ordering issues, including attaching opening project-like text to a matching project title when descriptions appear before the resume header.
+10. If upload fails or the backend is offline, the user sees a clear upload error and can paste resume text manually.
 
 ## Save-To-Tracker Workflow
 
