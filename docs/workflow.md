@@ -13,15 +13,16 @@
 9. Application Writer Agent drafts customized answers for internship application questions.
 10. Cover Letter Agent generates a role-specific internship cover letter.
 11. Multi-Agent Orchestrator can run steps 4-10 from one endpoint.
-12. User saves strong opportunities into an application pipeline.
-13. Resume Agent helps tailor materials for selected opportunities.
-14. Application Agent tracks statuses, deadlines, and follow-ups.
-15. Interview Agent prepares the user for technical and behavioral interviews.
-16. The system keeps a history of decisions, outputs, and progress.
+12. User saves strong opportunities into the SQLite Application Tracker.
+13. User updates application status as `Saved`, `Applied`, `Interview`, `Rejected`, or `Selected`.
+14. Resume Agent helps tailor materials for selected opportunities.
+15. Application Agent tracks statuses, deadlines, and follow-ups.
+16. Interview Agent prepares the user for technical and behavioral interviews.
+17. The system keeps a history of decisions, outputs, and progress.
 
 ## Initial Workflow
 
-The current application supports the first analysis chain: resume text input, job description input, resume analysis, job description analysis, match scoring, skill gap planning, application answer drafting, cover letter generation, and full orchestration from the frontend UI. The database will be added around this workflow later.
+The current application supports the first analysis chain: resume text input, job description input, resume analysis, job description analysis, match scoring, skill gap planning, application answer drafting, cover letter generation, full orchestration from the frontend UI, and saving analyses to SQLite.
 
 ## Current API Workflow
 
@@ -33,6 +34,8 @@ The current application supports the first analysis chain: resume text input, jo
 6. `POST /api/application/write` generates a tailored answer for a specific application question.
 7. `POST /api/cover-letter/generate` generates a customized internship cover letter.
 8. `POST /api/orchestrator/analyze-application` runs the full analysis pipeline in one request.
+9. `POST /api/tracker/applications` saves a full application analysis.
+10. `GET /api/tracker/applications` lists saved applications.
 
 ## Orchestrator Workflow
 
@@ -60,8 +63,22 @@ The Next.js frontend uses the orchestrator endpoint as its main API.
 | UI renders summary and score | `PipelineSummaryCard`, `MatchScoreCard` | Uses `pipeline_summary`, `match_result` |
 | UI renders roadmap | `SkillGapCard` | Uses `skill_gap_result` |
 | UI renders generated writing | `ApplicationAnswerCard`, `CoverLetterCard` | Uses `application_answer`, `cover_letter` |
+| User clicks `Save Application` | `ResultsDashboard` | `POST /api/tracker/applications` |
+| UI loads saved applications | `ApplicationTracker` | `GET /api/tracker/applications` |
+| User changes status | `ApplicationTracker` | `PATCH /api/tracker/applications/{id}/status` |
+| User deletes a row | `ApplicationTracker` | `DELETE /api/tracker/applications/{id}` |
 
 If the backend is not running, the frontend displays a clear connection error from the API client.
+
+## Save-To-Tracker Workflow
+
+1. User runs the orchestrator analysis from the frontend.
+2. Frontend receives `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, `application_answer`, `cover_letter`, and `pipeline_summary`.
+3. User clicks `Save Application`.
+4. Frontend sends the full analysis output to `POST /api/tracker/applications`.
+5. Backend extracts compact fields such as company, role, score, level, and candidate name.
+6. Backend stores nested agent outputs as JSON strings in SQLite.
+7. Frontend refreshes the tracker table.
 
 ## Future Workflow Questions
 

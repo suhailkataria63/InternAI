@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import AnalysisForm from "../components/AnalysisForm";
+import ApplicationTracker from "../components/ApplicationTracker";
 import ResultsDashboard from "../components/ResultsDashboard";
 import type { AnalysisResponse } from "../lib/types";
 
 export default function Home() {
   const [result, setResult] = useState<AnalysisResponse | null>(null);
+  const [trackerRefreshKey, setTrackerRefreshKey] = useState(0);
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -39,8 +41,12 @@ export default function Home() {
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_520px] xl:items-start">
           <AnalysisForm onResult={setResult} />
-          <ResultsDashboard result={result} />
+          <ResultsDashboard
+            result={result}
+            onSaved={() => setTrackerRefreshKey((current) => current + 1)}
+          />
         </div>
+        <ApplicationTracker refreshKey={trackerRefreshKey} />
       </div>
     </main>
   );

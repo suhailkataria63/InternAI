@@ -122,6 +122,135 @@ Validation error status code: `400 Bad Request`
 
 Agent failure status code: `500 Internal Server Error`
 
+## Application Tracker
+
+The tracker stores full orchestrator outputs in SQLite at `backend/internai.db`.
+
+Allowed statuses:
+
+- `Saved`
+- `Applied`
+- `Interview`
+- `Rejected`
+- `Selected`
+
+### `POST /api/tracker/applications`
+
+Saves a full application analysis.
+
+Example request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/tracker/applications \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_text": "Jane Doe\nSkills\nPython",
+    "job_description": "Role: Software Engineering Intern",
+    "resume_profile": {"name": "Jane Doe", "skills": ["Python"]},
+    "job_profile": {"role_title": "Software Engineering Intern", "company_name": "Acme Labs"},
+    "match_result": {"match_score": 82, "match_level": "Strong Fit"},
+    "skill_gap_result": {},
+    "application_answer": {},
+    "cover_letter": {},
+    "pipeline_summary": {
+      "candidate_name": "Jane Doe",
+      "target_role": "Software Engineering Intern",
+      "company_name": "Acme Labs",
+      "match_score": 82,
+      "match_level": "Strong Fit"
+    },
+    "status": "Saved",
+    "notes": "Promising backend internship"
+  }'
+```
+
+Success status code: `201 Created`
+
+### `GET /api/tracker/applications`
+
+Lists saved applications in compact form.
+
+Example request:
+
+```bash
+curl http://127.0.0.1:8000/api/tracker/applications
+```
+
+Example response:
+
+```json
+[
+  {
+    "id": 1,
+    "candidate_name": "Jane Doe",
+    "company_name": "Acme Labs",
+    "role_title": "Software Engineering Intern",
+    "match_score": 82,
+    "match_level": "Strong Fit",
+    "status": "Saved",
+    "notes": "Promising backend internship",
+    "created_at": "2026-05-18T06:00:00",
+    "updated_at": "2026-05-18T06:00:00"
+  }
+]
+```
+
+### `GET /api/tracker/applications/{application_id}`
+
+Returns full saved application details, including parsed JSON outputs.
+
+Example request:
+
+```bash
+curl http://127.0.0.1:8000/api/tracker/applications/1
+```
+
+Success status code: `200 OK`
+
+Not found status code: `404 Not Found`
+
+### `PATCH /api/tracker/applications/{application_id}/status`
+
+Updates the application status.
+
+Example request:
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/api/tracker/applications/1/status \
+  -H "Content-Type: application/json" \
+  -d '{"status": "Applied"}'
+```
+
+Success status code: `200 OK`
+
+Invalid status code: `400 Bad Request`
+
+### `PATCH /api/tracker/applications/{application_id}/notes`
+
+Updates application notes.
+
+Example request:
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/api/tracker/applications/1/notes \
+  -H "Content-Type: application/json" \
+  -d '{"notes": "Follow up next week."}'
+```
+
+Success status code: `200 OK`
+
+### `DELETE /api/tracker/applications/{application_id}`
+
+Deletes a saved application.
+
+Example request:
+
+```bash
+curl -X DELETE http://127.0.0.1:8000/api/tracker/applications/1
+```
+
+Success status code: `204 No Content`
+
 ## Resume Upload
 
 ### `POST /api/resume/upload`

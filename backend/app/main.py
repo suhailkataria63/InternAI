@@ -8,7 +8,13 @@ from app.api.match import router as match_router
 from app.api.orchestrator import router as orchestrator_router
 from app.api.resume import router as resume_router
 from app.api.skill_gap import router as skill_gap_router
+from app.api.tracker import router as tracker_router
 from app.config import settings
+from app.database import models
+from app.database.session import Base, engine
+
+
+Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
@@ -32,6 +38,7 @@ app.include_router(skill_gap_router)
 app.include_router(application_writer_router)
 app.include_router(cover_letter_router)
 app.include_router(orchestrator_router)
+app.include_router(tracker_router)
 
 
 @app.get("/health", tags=["System"])

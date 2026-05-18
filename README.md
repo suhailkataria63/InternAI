@@ -26,6 +26,7 @@ InternAI will provide a guided assistant that organizes the internship process i
 - Cover Letter Agent that generates customized internship cover letters without requiring an external LLM API key.
 - Multi-Agent Orchestrator endpoint that runs the complete resume-to-application pipeline in one request.
 - Next.js frontend UI for running the full orchestrator workflow from a browser.
+- SQLite-backed Application Tracker for saving analyzed internships and tracking status.
 
 ## Tech Stack
 
@@ -597,8 +598,64 @@ The frontend page lets a user:
 3. Set the application question, tone, answer word limit, and cover letter length.
 4. Click `Analyze`.
 5. Review the pipeline summary, match score, missing skills, learning roadmap, application answer, and cover letter.
+6. Save the analysis to the application tracker.
+7. Track saved applications by company, role, match score, match level, and status.
 
 The `Use Sample Data` button fills the form with a tested resume and job description so the full workflow can be tried quickly.
+
+## Application Tracker
+
+InternAI stores saved application analyses in a local SQLite database at `backend/internai.db`. The database is created automatically when the FastAPI app starts.
+
+Supported statuses:
+
+- `Saved`
+- `Applied`
+- `Interview`
+- `Rejected`
+- `Selected`
+
+The tracker saves the full orchestrator output as JSON strings, including resume profile, job profile, match result, skill gap result, application answer, cover letter, and pipeline summary.
+
+Save an orchestrator result:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/tracker/applications \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_profile": {"name": "Jane Doe"},
+    "job_profile": {"role_title": "Software Engineering Intern", "company_name": "Acme Labs"},
+    "match_result": {"match_score": 82, "match_level": "Strong Fit"},
+    "skill_gap_result": {},
+    "application_answer": {},
+    "cover_letter": {},
+    "pipeline_summary": {
+      "candidate_name": "Jane Doe",
+      "target_role": "Software Engineering Intern",
+      "company_name": "Acme Labs",
+      "match_score": 82,
+      "match_level": "Strong Fit"
+    },
+    "status": "Saved",
+    "notes": "Promising backend internship"
+  }'
+```
+
+List saved applications:
+
+```bash
+curl http://127.0.0.1:8000/api/tracker/applications
+```
+
+Update status:
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/api/tracker/applications/1/status \
+  -H "Content-Type: application/json" \
+  -d '{"status": "Applied"}'
+```
+
+The frontend tracker calls these APIs after the user saves an orchestrator analysis.
 
 ## Screenshot Placeholder
 
@@ -621,8 +678,8 @@ Add screenshots here after the UI is run locally:
 9. Add Cover Letter Agent for customized internship cover letters.
 10. Add Multi-Agent Orchestrator for end-to-end analysis.
 11. Add frontend UI for running the orchestrator workflow.
-12. Add SQLite database models and persistence.
-13. Build core API routes for user profile, opportunities, and applications.
+12. Add SQLite Application Tracker for saved analyses.
+13. Build core API routes for user profile and opportunity search.
 14. Add the first LLM-powered agent workflow.
 15. Add authentication and user-specific data.
 16. Improve agent orchestration with LangChain or LangGraph.

@@ -1,19 +1,78 @@
-import type { AnalysisRequest, AnalysisResponse } from "./types";
+import type {
+  AnalysisRequest,
+  AnalysisResponse,
+  ApplicationDetail,
+  ApplicationListItem,
+  ApplicationStatus,
+} from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export async function analyzeApplication(
   payload: AnalysisRequest,
 ): Promise<AnalysisResponse> {
+  return requestJson<AnalysisResponse>("/api/orchestrator/analyze-application", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveApplicationAnalysis(
+  payload: AnalysisResponse,
+): Promise<ApplicationDetail> {
+  return requestJson<ApplicationDetail>("/api/tracker/applications", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listApplications(): Promise<ApplicationListItem[]> {
+  return requestJson<ApplicationListItem[]>("/api/tracker/applications");
+}
+
+export async function getApplication(id: number): Promise<ApplicationDetail> {
+  return requestJson<ApplicationDetail>(`/api/tracker/applications/${id}`);
+}
+
+export async function updateApplicationStatus(
+  id: number,
+  status: ApplicationStatus,
+): Promise<ApplicationDetail> {
+  return requestJson<ApplicationDetail>(`/api/tracker/applications/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function updateApplicationNotes(
+  id: number,
+  notes: string,
+): Promise<ApplicationDetail> {
+  return requestJson<ApplicationDetail>(`/api/tracker/applications/${id}/notes`, {
+    method: "PATCH",
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export async function deleteApplication(id: number): Promise<void> {
+  await requestJson<void>(`/api/tracker/applications/${id}`, {
+    method: "DELETE",
+  });
+}
+
+async function requestJson<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   let response: Response;
 
   try {
-    response = await fetch(`${API_BASE_URL}/api/orchestrator/analyze-application`, {
-      method: "POST",
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
       headers: {
         "Content-Type": "application/json",
+        ...init.headers,
       },
-      body: JSON.stringify(payload),
     });
   } catch {
     throw new Error(
@@ -36,5 +95,9 @@ export async function analyzeApplication(
     throw new Error(message);
   }
 
-  return response.json();
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
 }

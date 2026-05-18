@@ -16,7 +16,14 @@ The backend uses FastAPI. It will expose REST endpoints for frontend workflows, 
 
 ### Database
 
-SQLite will be used during early development for simple local persistence. The database layer will eventually store user profiles, internship opportunities, application records, generated materials, and agent activity history.
+SQLite is used during early development for simple local persistence. The database file is created at `backend/internai.db` when the FastAPI app starts.
+
+Current tracker storage:
+
+- `applications` table stores saved internship analyses.
+- Compact columns store candidate name, company, role, score, match level, status, notes, and timestamps.
+- Nested agent outputs are stored as JSON strings for resume profile, job profile, match result, skill gap result, application answer, cover letter, and pipeline summary.
+- SQLAlchemy provides the engine, session, declarative base, and request-scoped database dependency.
 
 ### AI Workflow Layer
 
@@ -31,6 +38,16 @@ LangChain or LangGraph will be introduced later to coordinate multi-agent behavi
 5. Agent modules are invoked when AI-assisted work is needed.
 6. The backend returns structured responses to the frontend.
 
+## Application Tracker Flow
+
+1. User runs the orchestrator from the Next.js frontend.
+2. User saves the result from the results dashboard.
+3. Frontend calls `POST /api/tracker/applications`.
+4. FastAPI validates the payload with tracker schemas.
+5. Tracker service serializes nested outputs with `json.dumps`.
+6. SQLAlchemy persists the row in SQLite.
+7. Tracker list endpoint returns compact rows for the frontend table.
+
 ## Backend Module Plan
 
 - `api/`: Route definitions and API composition.
@@ -42,4 +59,4 @@ LangChain or LangGraph will be introduced later to coordinate multi-agent behavi
 
 ## Current Status
 
-The current architecture includes a FastAPI application with CORS configured for local frontend development and a `/health` endpoint for verification.
+The current architecture includes a FastAPI application with CORS configured for local frontend development, a `/health` endpoint for verification, a multi-agent orchestrator, and a SQLite-backed application tracker.

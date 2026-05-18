@@ -90,3 +90,35 @@ export type AnalysisResponse = {
   cover_letter: CoverLetterResult;
   pipeline_summary: PipelineSummary;
 };
+
+export type ApplicationStatus =
+  | "Saved"
+  | "Applied"
+  | "Interview"
+  | "Rejected"
+  | "Selected";
+
+export type ApplicationListItem = {
+  id: number;
+  candidate_name?: string | null;
+  company_name?: string | null;
+  role_title?: string | null;
+  match_score?: number | null;
+  match_level?: string | null;
+  status: ApplicationStatus;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApplicationDetail = ApplicationListItem & {
+  resume_text?: string | null;
+  job_description?: string | null;
+  resume_profile: Record<string, unknown>;
+  job_profile: Record<string, unknown>;
+  match_result: MatchResult;
+  skill_gap_result: SkillGapResult;
+  application_answer: ApplicationAnswer;
+  cover_letter: CoverLetterResult;
+  pipeline_summary: PipelineSummary;
+};
