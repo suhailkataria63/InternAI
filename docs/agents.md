@@ -100,19 +100,27 @@ Output:
 Internal logic:
 
 - Normalizes pasted job description text into clean lines.
-- Extracts role title from labels such as `Role`, `Position`, `Title`, or from common title words like `Intern`, `Developer`, and `Engineer`.
-- Extracts company name from labels such as `Company`, `Organization`, or `Employer`.
-- Detects sections such as `Required Skills`, `Preferred Skills`, `Responsibilities`, and `Eligibility`.
-- Extracts stipend, duration, and location from labeled fields or common inline patterns.
-- Detects work mode as `Remote`, `Hybrid`, or `On-site`.
-- Builds keywords from skills, role title, company, location, and work mode.
+- Extracts role title from labels such as `Role` and `Position`, and from phrases such as `hiring an AI/ML Intern`, `applying for the X role`, and `X internship`.
+- Extracts company name from labels such as `Company`, from `Example AI Startup is hiring...`, or from `at Example AI Startup`.
+- Uses a centralized skill dictionary covering frontend, backend, AI/ML, data, API, Git, Docker, and soft-skill terms.
+- Treats skills as required only when they appear near required phrases such as `required skills`, `must have`, `mandatory`, `candidate should have`, `should know`, `need experience in`, or `strong knowledge of`.
+- Treats skills as preferred only when they appear near preferred phrases such as `preferred skills`, `good to have`, `nice to have`, `bonus`, `plus`, `preferred qualifications`, `additional skills`, or `familiarity with`.
+- Keeps skills that appear only in preferred sections out of `required_skills`; when a skill appears in both places, it remains required and is removed from preferred.
+- Falls back to whole-description skill extraction only when no explicit required skill context exists.
+- Extracts responsibilities from sections and phrases such as `responsibilities include`, `selected intern's day-to-day responsibilities include`, `you will`, `work on`, and `tasks include`.
+- Extracts eligibility from lines mentioning students, candidates, degree, year, semester, availability, relevant skills, or interests.
+- Extracts stipend, duration, and location from labeled fields or common inline patterns, including unpaid roles and rupee/INR stipends.
+- Detects work mode as `Remote`, `Work From Home`, `Hybrid`, `On-site`, or `Not specified`.
+- Builds keywords from role title tokens, required skills, preferred skills, work mode, and responsibility terms.
 - Stores an LLM-ready prompt template for future LangChain or LangGraph integration.
 
 Current limitations:
 
 - The agent is rule-based and works best with reasonably formatted job descriptions.
 - Company and role extraction may be incomplete when descriptions use unusual formatting.
-- Skills are detected from a starter keyword list and explicit sections.
+- Skills are detected from a curated keyword dictionary and may miss uncommon tools.
+- Required and preferred separation depends on recognizable wording around skill lists.
+- Responsibilities and eligibility may need cleanup for very long paragraph-style descriptions.
 - The agent does not yet compare the job profile against a resume profile.
 
 Future improvements:

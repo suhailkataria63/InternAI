@@ -242,9 +242,30 @@ The JD Analyzer Agent receives pasted internship or job description text and con
 
 Input: raw job description text in the `job_description` field.
 
-Processing: the current implementation uses rule-based extraction for role title, company, skills, responsibilities, eligibility, stipend, duration, location, work mode, and keywords. A prompt template is stored in the agent file for future LLM integration.
+Processing: the current implementation uses improved rule-based extraction for role title, company, required skills, preferred skills, responsibilities, eligibility, stipend, duration, location, work mode, and keywords. It separates required skills from preferred skills by looking for phrases such as `required skills`, `must have`, and `candidate should have` versus `preferred skills`, `good to have`, `nice to have`, and `familiarity with`. If a skill appears only in a preferred section, it stays out of `required_skills`; if it appears in both places, the required classification wins.
 
 Output: a normalized `job_profile` object that future matching agents can compare against the parsed resume profile.
+
+Example parsed JD output:
+
+```json
+{
+  "role_title": "AI/ML Intern",
+  "company_name": "Example AI Startup",
+  "required_skills": ["Python", "FastAPI", "Machine Learning", "SQL"],
+  "preferred_skills": ["React", "Next.js", "LangChain", "Docker"],
+  "responsibilities": [
+    "building REST APIs",
+    "training ML models, and creating dashboards"
+  ],
+  "eligibility": ["Candidates can apply who are B.Tech students available for 6 months"],
+  "stipend": "INR 15,000 per month",
+  "duration": "6 months",
+  "location": "Remote",
+  "work_mode": "Remote",
+  "keywords": ["AI", "ML", "Python", "FastAPI", "Machine Learning", "SQL"]
+}
+```
 
 Score a resume profile against a job profile:
 
