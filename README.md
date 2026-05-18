@@ -685,11 +685,23 @@ The frontend page lets a user:
 2. Paste an internship or job description.
 3. Set the application question, tone, answer word limit, and cover letter length.
 4. Click `Analyze`.
-5. Review the pipeline summary, match score, missing skills, learning roadmap, application answer, and cover letter.
-6. Save the analysis to the application tracker.
-7. Track saved applications by company, role, match score, match level, and status.
+5. Review the pipeline summary, large match score, score breakdown, grouped matched/missing skills, learning roadmap, application answer, and cover letter.
+6. Copy the generated application answer or cover letter from the dashboard.
+7. Save the analysis to the application tracker with clear saving, success, and failure states.
+8. Avoid duplicate saves for the same result session after the analysis is saved.
+9. Track saved applications by company, role, match score, match level, and status.
 
 The `Use Sample Data` button fills the form with a tested resume and job description so the full workflow can be tried quickly.
+
+The results dashboard is organized for portfolio demos:
+
+- Pipeline summary with candidate, role, company, score, level, and next step.
+- Match score card with required and preferred skill percentages.
+- Score breakdown for required skills, preferred skills, project relevance, education relevance, and experience/certifications.
+- Skills overview grouped by matched required, missing required, matched preferred, missing preferred, general matched, and general missing skills.
+- Skill gap roadmap with priorities, reasons, estimated learning time, week-wise tasks, and mini-project recommendations.
+- Copy buttons for generated application answers and cover letters.
+- Tracker save UX that shows `Save Application`, `Saving...`, `Application saved successfully`, or a failure message.
 
 ## Application Tracker
 

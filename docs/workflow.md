@@ -67,14 +67,18 @@ The Next.js frontend uses the orchestrator endpoint as its main API.
 | User clicks `Analyze` | `frontend/lib/api.ts` | `POST /api/orchestrator/analyze-application` |
 | Backend returns full pipeline output | `analyzeApplication` | Orchestrator response |
 | UI renders summary and score | `PipelineSummaryCard`, `MatchScoreCard` | Uses `pipeline_summary`, `match_result` |
-| UI renders roadmap | `SkillGapCard` | Uses `skill_gap_result` |
-| UI renders generated writing | `ApplicationAnswerCard`, `CoverLetterCard` | Uses `application_answer`, `cover_letter` |
+| UI renders score evidence | `ResultsDashboard` | Uses `match_result.score_breakdown` |
+| UI renders skill groups | `ResultsDashboard`, `SkillBadge` | Uses required/preferred matched and missing skills |
+| UI renders roadmap | `SkillGapCard` | Uses priority skills, roadmap weeks, and recommended projects |
+| UI renders generated writing | `ApplicationAnswerCard`, `CoverLetterCard` | Uses generated text, tone, word count, key points, and copy buttons |
 | User clicks `Save Application` | `ResultsDashboard` | `POST /api/tracker/applications` |
 | UI loads saved applications | `ApplicationTracker` | `GET /api/tracker/applications` |
 | User changes status | `ApplicationTracker` | `PATCH /api/tracker/applications/{id}/status` |
 | User deletes a row | `ApplicationTracker` | `DELETE /api/tracker/applications/{id}` |
 
 If the backend is not running, the frontend displays a clear connection error from the API client.
+
+After an orchestrator response, the results dashboard displays sections in this order: pipeline summary, match score, score breakdown, skills overview, skill gap roadmap, application answer, cover letter, and tracker save controls. Missing fields are rendered with fallback text so partial backend responses do not crash the UI.
 
 ## Save-To-Tracker Workflow
 
