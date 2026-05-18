@@ -5,6 +5,8 @@ __pycache__/
 venv/
 .env
 *.db
+.env.local
+frontend/.env.local
 
 # Node
 node_modules/
