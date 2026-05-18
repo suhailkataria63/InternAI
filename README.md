@@ -242,7 +242,7 @@ The JD Analyzer Agent receives pasted internship or job description text and con
 
 Input: raw job description text in the `job_description` field.
 
-Processing: the current implementation uses improved rule-based extraction for role title, company, required skills, preferred skills, responsibilities, eligibility, stipend, duration, location, work mode, and keywords. It prioritizes clean role patterns such as `hiring an AI/ML Intern` and `role: AI/ML Intern`, rejects noisy phrases such as `deployment experience` or `selected intern`, and separates required skills from preferred skills by looking for phrases such as `required skills`, `must have`, and `candidate should have` versus `preferred skills`, `good to have`, `nice to have`, and `familiarity with`.
+Processing: the current implementation uses improved rule-based extraction for role title, company, required skills, preferred skills, responsibilities, eligibility, stipend, duration, location, work mode, and keywords. It prioritizes clean role patterns such as `As an Artificial Intelligence (AI) Intern at COMPANY`, `hiring an AI/ML Intern`, and `role: AI/ML Intern`, rejects noisy phrases such as `deployment experience` or `selected intern`, extracts company names from `Company:`, `About COMPANY`, uppercase company blocks, and common suffixes like `PVT LTD`, and separates required skills from preferred skills by looking for phrases such as `required skills`, `must have`, and `candidate should have` versus `preferred skills`, `good to have`, `nice to have`, and `familiarity with`.
 
 Output: a normalized `job_profile` object that future matching agents can compare against the parsed resume profile.
 

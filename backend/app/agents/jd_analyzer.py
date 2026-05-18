@@ -68,6 +68,11 @@ SKILL_ALIASES = {
     "APIs": ("apis", "api integration", "api integrations"),
     "Backend Development": ("backend development", "backend"),
     "Frontend Development": ("frontend development", "frontend", "front-end"),
+    "Artificial Intelligence": ("artificial intelligence",),
+    "Data Structures": ("data structures", "dsa"),
+    "Data Science": ("data science",),
+    "Neural Networks": ("neural networks", "neural network"),
+    "Natural Language Processing (NLP)": ("natural language processing", "natural language processing (nlp)"),
 }
 
 REQUIRED_SECTION_KEYWORDS = [
@@ -140,6 +145,12 @@ STOP_SECTION_KEYWORDS = [
     "work mode",
     "about",
     "company",
+    "perks",
+    "number of openings",
+    "openings",
+    "certificate",
+    "letter of recommendation",
+    "flexible work hours",
 ]
 
 
@@ -185,10 +196,14 @@ def split_lines(text: str) -> list:
 
 
 def extract_role_title(text: str, lines: list) -> str:
+    role_suffix = r"(?:developer\s+intern|engineer\s+intern|analyst\s+intern|associate\s+intern|intern|developer|engineer|analyst|associate)"
     patterns = (
         r"(?:role|position|title|job title)\s*:\s*([^\n.]+)",
-        r"hiring\s+(?:an?|for\s+)?([A-Za-z0-9/ .+-]+?\b(?:intern|developer|engineer|analyst|associate))\b",
-        r"\b([A-Za-z0-9/ .+-]+?\b(?:intern|developer|engineer|analyst|associate))\s+for\s+\d+\s*(?:weeks?|months?|years?)\b",
+        rf"\bAs\s+an?\s+([A-Za-z0-9/() .+-]+?\b{role_suffix})\s+at\s+",
+        rf"looking\s+for\s+an?\s+([A-Za-z0-9/() .+-]+?\b{role_suffix})\b",
+        rf"hiring\s+for\s+([A-Za-z0-9/() .+-]+?\b{role_suffix})\b",
+        rf"hiring\s+(?:an?\s+)?([A-Za-z0-9/() .+-]+?\b{role_suffix})\b",
+        rf"\b([A-Za-z0-9/() .+-]+?\b{role_suffix})\s+for\s+\d+\s*(?:weeks?|months?|years?)\b",
         r"applying\s+for\s+the\s+([A-Za-z0-9/ .+-]+?)\s+role\b",
     )
     for pattern in patterns:
@@ -211,19 +226,25 @@ def extract_role_title(text: str, lines: list) -> str:
 def extract_company_name(text: str, lines: list) -> str:
     patterns = (
         r"(?:company|organization|employer)\s*:\s*([^\n.]+)",
+        r"^About\s+([A-Z][A-Z0-9&.' -]{2,100}(?:PVT LTD|PRIVATE LIMITED|LTD|LLP|INC|TECHNOLOGIES)?)\s*$",
+        r"\bAs\s+an?\s+[A-Za-z0-9/() .+-]+?\b(?:developer\s+intern|engineer\s+intern|analyst\s+intern|associate\s+intern|intern|developer|engineer|analyst|associate)\s+at\s+([^,\n.]+)",
         r"([A-Z][A-Za-z0-9&.' -]{2,70})\s+is\s+hiring\b",
-        r"\bat\s+([A-Z][A-Za-z0-9&.' -]{2,70})(?:\s+is\b|\.|,|\n|$)",
+        r"\bat\s+([A-Z][A-Za-z0-9&' -]{2,70})(?:\s+is\b|\.|,|\n|$)",
     )
     for pattern in patterns:
-        match = re.search(pattern, text)
+        match = re.search(pattern, text, flags=re.MULTILINE | re.IGNORECASE)
         if match:
-            value = _clean_inline_value(match.group(1))
+            value = clean_company_name(match.group(1))
             if not _looks_like_role(value):
                 return value
 
     for line in lines[:8]:
         if line.lower().startswith("company:"):
-            return _clean_inline_value(line.split(":", 1)[1])
+            return clean_company_name(line.split(":", 1)[1])
+        if line.lower().startswith("about "):
+            company = clean_company_name(line[6:])
+            if company and not _looks_like_role(company):
+                return company
     return ""
 
 
@@ -361,7 +382,7 @@ def extract_work_mode(text: str) -> str:
     if "hybrid" in lowered_text:
         return "Hybrid"
     if "work from home" in lowered_text or "wfh" in lowered_text:
-        return "Work From Home"
+        return "Work from home"
     if "remote" in lowered_text:
         return "Remote"
     if "on-site" in lowered_text or "onsite" in lowered_text or "in office" in lowered_text:
@@ -487,10 +508,32 @@ def _clean_inline_value(value: str) -> str:
     return value.strip(" -•\t:,.")
 
 
+def clean_role_title(text: str) -> str:
+    return _clean_role_title(text, text)
+
+
+def clean_company_name(text: str) -> str:
+    company = _clean_inline_value(text)
+    company = re.split(
+        r"\b(?:you will|who can apply|selected intern|responsibilities|required skills|preferred skills|perks|about the internship)\b",
+        company,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0]
+    company = re.sub(r"^(?:about|company)\s*:\s*", "", company, flags=re.IGNORECASE)
+    company = re.sub(r"^about\s+", "", company, flags=re.IGNORECASE)
+    company = company.strip(" -•\t:,.")
+    return company[:100].strip(" -•\t:,.")
+
+
+def title_case_role(text: str) -> str:
+    return _title_case_role(text)
+
+
 def _clean_role_title(value: str, full_text: str) -> str:
     cleaned = _clean_inline_value(value)
     cleaned = re.split(
-        r"\b(?:for\s+\d+\s*(?:weeks?|months?|years?)|remote|with|required|preferred|responsibilities)\b",
+        r"\b(?:at|with|where|you will|who can apply|selected intern|for\s+\d+\s*(?:weeks?|months?|years?)|remote|work from home|required|preferred|responsibilities|perks|eligibility)\b",
         cleaned,
         maxsplit=1,
         flags=re.IGNORECASE,
@@ -501,24 +544,35 @@ def _clean_role_title(value: str, full_text: str) -> str:
     invalid_phrases = (
         "deployment experience",
         "the internship",
+        "about the internship",
         "required skills",
         "preferred skills",
         "responsibilities",
         "candidate should",
         "selected intern",
+        "who can apply",
+        "perks",
     )
     lowered = cleaned.lower()
     if not cleaned or any(phrase in lowered for phrase in invalid_phrases):
         return _fallback_role_title(full_text)
     if not re.search(r"\b(intern|developer|engineer|analyst|associate)\b", cleaned, re.IGNORECASE):
         return _fallback_role_title(full_text)
+    words = cleaned.split()
+    if len(words) > 10:
+        cleaned = " ".join(words[:10])
     return _title_case_role(cleaned)
 
 
 def _fallback_role_title(text: str) -> str:
     fallback_patterns = (
+        (r"\bArtificial Intelligence\s*\(AI\)\s+Intern\b", "Artificial Intelligence (AI) Intern"),
+        (r"\bArtificial Intelligence\s+Intern\b", "Artificial Intelligence Intern"),
         (r"\bAI\s*/?\s*ML\s+Intern\b", "AI/ML Intern"),
         (r"\bData Science Intern\b", "Data Science Intern"),
+        (r"\bMachine Learning Intern\b", "Machine Learning Intern"),
+        (r"\bReact Developer Intern\b", "React Developer Intern"),
+        (r"\bBackend Developer Intern\b", "Backend Developer Intern"),
         (r"\bSoftware Intern\b", "Software Intern"),
     )
     for pattern, title in fallback_patterns:
@@ -530,11 +584,23 @@ def _fallback_role_title(text: str) -> str:
 
 
 def _title_case_role(value: str) -> str:
-    special_terms = {"ai": "AI", "ml": "ML", "api": "API", "apis": "APIs", "nlp": "NLP"}
+    special_terms = {
+        "ai": "AI",
+        "ml": "ML",
+        "api": "API",
+        "apis": "APIs",
+        "nlp": "NLP",
+        "sql": "SQL",
+        "react": "React",
+        "next.js": "Next.js",
+        "(ai)": "(AI)",
+        "(ml)": "(ML)",
+        "(nlp)": "(NLP)",
+    }
     words = []
     for word in value.strip().split():
         cleaned = word.strip()
-        key = cleaned.lower().strip("/-")
+        key = cleaned.lower().strip("/-,")
         if "/" in cleaned:
             words.append("/".join(special_terms.get(part.lower(), part.upper() if len(part) <= 2 else part.title()) for part in cleaned.split("/")))
         else:

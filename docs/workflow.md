@@ -7,7 +7,7 @@
 3. User uploads a resume PDF, and the backend extracts raw text.
 4. Resume Analyzer Agent converts resume text into a structured profile, including improved paragraph-style extraction for name, education, skills, projects, experience, and certifications.
 5. User pastes an internship or job description.
-6. JD Analyzer Agent converts the description into a structured job profile with clearer required/preferred skill separation.
+6. JD Analyzer Agent converts the description into a structured job profile with cleaner role/company extraction and clearer required/preferred skill separation.
 7. Match Scoring Agent compares both profiles and returns a weighted fit score, score breakdown, missing required/preferred skills, project relevance notes, and a recommendation.
 8. Skill Gap Agent turns missing skills into priorities, a learning roadmap, resume suggestions, and mini-projects.
 9. Application Writer Agent drafts customized answers for internship application questions.
@@ -54,6 +54,8 @@ The orchestrator endpoint accepts raw `resume_text` and `job_description`, then 
 Improved resume extraction strengthens every downstream agent because match scoring, skill-gap planning, application answers, cover letters, and tracker summaries all reuse `resume_profile`.
 
 Improved JD parsing strengthens match scoring and skill-gap priority because required skills drive higher score weight and High-priority learning gaps, while preferred-only skills remain Medium priority.
+
+Before match scoring, job description text is normalized into a structured `job_profile` with fields such as clean `role_title`, `company_name`, required skills, preferred skills, responsibilities, eligibility, duration, work mode, location, and stipend.
 
 Improved match scoring gives the Skill Gap Agent cleaner missing required and preferred skills, and gives the Application Tracker a more explainable score breakdown for saved opportunities.
 

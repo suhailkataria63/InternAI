@@ -101,9 +101,9 @@ Output:
 Internal logic:
 
 - Normalizes pasted job description text into clean lines.
-- Extracts role title from labels such as `Role` and `Position`, and from phrases such as `hiring an AI/ML Intern`, `hiring for AI/ML Intern`, `applying for the X role`, and `AI/ML Intern for 6 months`.
+- Extracts clean role titles from labels such as `Role` and `Position`, and from phrases such as `As an Artificial Intelligence (AI) Intern at COMPANY`, `hiring an AI/ML Intern`, `hiring for AI/ML Intern`, `applying for the X role`, and `AI/ML Intern for 6 months`.
 - Cleans role titles by removing trailing work-mode/duration/context phrases and rejecting noisy matches such as `deployment experience`, `the internship`, `required skills`, `responsibilities`, `candidate should`, and `selected intern`.
-- Extracts company name from labels such as `Company`, from `Example AI Startup is hiring...`, or from `at Example AI Startup`.
+- Extracts company name from labels such as `Company`, from `About HEXACARE PHARMACEUTICALS PVT LTD`, uppercase company blocks, common suffixes such as `PVT LTD`, `Private Limited`, `Ltd`, `LLP`, `Inc`, and from `at Example AI Startup`.
 - Uses a centralized skill dictionary covering frontend, backend, AI/ML, data, API, Git, Docker, and soft-skill terms.
 - Treats skills as required only when they appear near required phrases such as `required skills`, `must have`, `mandatory`, `candidate should have`, `should know`, `need experience in`, or `strong knowledge of`.
 - Treats skills as preferred only when they appear near preferred phrases such as `preferred skills`, `good to have`, `nice to have`, `bonus`, `plus`, `preferred qualifications`, `additional skills`, or `familiarity with`.
@@ -111,6 +111,7 @@ Internal logic:
 - Falls back to whole-description skill extraction only when no explicit required skill context exists.
 - Extracts responsibilities from sections and phrases such as `responsibilities include`, `selected intern's day-to-day responsibilities include`, `you will`, `work on`, and `tasks include`.
 - Extracts eligibility from lines mentioning students, candidates, degree, year, semester, availability, relevant skills, or interests.
+- Keeps responsibilities, eligibility, and perks separated where recognizable section headings are present.
 - Extracts stipend, duration, and location from labeled fields or common inline patterns, including unpaid roles and rupee/INR stipends.
 - Detects work mode as `Remote`, `Work From Home`, `Hybrid`, `On-site`, or `Not specified`.
 - Builds keywords from role title tokens, required skills, preferred skills, work mode, and responsibility terms.
