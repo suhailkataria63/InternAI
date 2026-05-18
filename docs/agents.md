@@ -337,10 +337,14 @@ Tone options:
 Internal logic:
 
 - Detects the application question type from simple keyword patterns.
-- Extracts a summarized education entry, clean target role, matched skills, relevant projects, and learning focus.
+- Selects the best education entry, preferring `B.Tech`, `BTech`, `Bachelor`, `B.E`, engineering, AI, data science, computer science, degree, and currently pursuing signals over `Diploma` or `Class X`.
+- Extracts a clean target role, matched skills, relevant projects, and learning focus.
+- Converts structured project objects into concise writing summaries using the project name, the strongest evidence sentence, and the top technologies.
+- Uses the top two projects and top four to five matched skills so answers stay readable.
+- Frames missing skills as active learning or improvement areas instead of mastered skills.
+- Keeps `key_points_used` concise with education, target role, company when available, matched skills, project names, and learning focus.
 - Falls back to `this internship` when the role title is empty or suspicious.
 - Selects a template based on the question type.
-- Uses natural phrasing such as `I am currently pursuing...` instead of generic candidate wording.
 - Mentions missing skills only as learning goals, not mastered skills.
 - Applies a simple tone transformation.
 - Trims the answer to the requested word limit when possible.
@@ -406,7 +410,11 @@ Internal logic:
 
 - Builds a subject line from the target role and company.
 - Starts the letter with `Dear Hiring Team,`.
-- Mentions target role, company, summarized education, matched skills, relevant projects, and experience when available.
+- Mentions target role, company when available, best education summary, matched skills, relevant projects, and experience when available.
+- Handles missing company names gracefully in the subject line and opening sentence.
+- Avoids treating `Class X` as current education when a stronger degree such as `B.Tech` or `Bachelor` is present.
+- Converts long project descriptions into concise evidence and keeps project names in `key_points_used`.
+- Uses a clean professional format: opening/background paragraph, project-relevance paragraph, learning-gap paragraph, and polite closing.
 - Falls back to `the internship role` when the role title is empty or suspicious.
 - Mentions missing skills only as active learning areas.
 - Adds a polite closing.

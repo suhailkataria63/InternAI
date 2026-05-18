@@ -532,7 +532,9 @@ The Application Writer Agent creates customized internship application answers u
 
 Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, `application_question`, optional `tone`, and optional `word_limit`.
 
-Processing: the current implementation detects the question type, selects a template, inserts a cleaned education summary, target role, matched skills, relevant projects, and learning focus, then applies tone and trims to the requested word limit. It avoids suspicious role titles, avoids claiming missing skills as already mastered, and uses natural phrasing such as `I am currently pursuing...`.
+Processing: the current implementation detects the question type, selects a template, chooses the strongest education entry instead of blindly using the shortest item, inserts a clean target role, highlights top matched skills, summarizes the top two projects, and frames missing skills as active learning goals. It avoids suspicious role titles, handles missing company names gracefully, avoids claiming missing skills as already mastered, and trims to the requested word limit.
+
+Writing quality improvements: the agent prefers higher education such as `B.Tech`, `Bachelor`, engineering, AI, data science, or computer science over `Class X`; converts long project objects into concise evidence such as `Hybrid Phishing Detection System`; keeps `key_points_used` short; and limits learning focus to the most important missing skills.
 
 Output: the original question, generated answer, key points used, tone, word count, and an improvement note.
 
@@ -596,7 +598,9 @@ The Cover Letter Agent generates a customized internship cover letter using the 
 
 Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, optional `tone`, and optional `length`.
 
-Processing: the current implementation builds a subject line, opening summary, role-specific body, cleaned education summary, matched skill evidence, project and experience highlights, and a learning-gap sentence. It starts with `Dear Hiring Team,`, uses clean role-title fallbacks, ends politely, and avoids presenting missing skills as already mastered.
+Processing: the current implementation builds a subject line, opening summary, role-specific body, best education summary, matched skill evidence, concise project highlights, and a learning-gap sentence. It starts with `Dear Hiring Team,`, handles missing company names without awkward `at` text, uses clean role-title fallbacks, ends politely, and avoids presenting missing skills as already mastered.
+
+Cover letter quality improvements: the agent avoids treating `Class X` as current education when a stronger degree exists, keeps project evidence short, uses one background paragraph, one project-relevance paragraph, and a closing section, and keeps `key_points_used` focused on education, role, company, matched skills, project names, and learning focus.
 
 Output: `cover_letter`, `subject_line`, `opening_summary`, `key_points_used`, `tone`, and `word_count`.
 
@@ -654,6 +658,8 @@ Agent communication flow:
 7. Orchestrator builds `pipeline_summary` for quick review.
 
 This endpoint works without any external LLM API key and reuses the existing rule-based and template-based agents.
+
+The final writing agents use cleaned profile data from earlier phases: best education selection, concise project summaries, matched skill highlighting, and learning-gap framing produce more natural answers and cover letters while staying grounded in the extracted resume and job profile.
 
 ### Frontend
 

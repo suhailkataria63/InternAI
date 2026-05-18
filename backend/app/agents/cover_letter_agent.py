@@ -74,21 +74,34 @@ def extract_education(resume_profile: dict) -> str:
     return summarize_education(resume_profile.get("education", []))
 
 
+def select_best_education(education: list[str]) -> str:
+    items = [education] if isinstance(education, str) else education or []
+    cleaned_items = [_clean_education_summary(normalize_text(item)) for item in items]
+    cleaned_items = [item for item in cleaned_items if item]
+    if not cleaned_items:
+        return "my academic background"
+
+    def score(item: str) -> int:
+        lowered = item.lower()
+        points = 0
+        if re.search(r"\bb\.?\s?tech\b|\bbtech\b|bachelor|b\.e\b|degree", lowered):
+            points += 8
+        if any(term in lowered for term in ("artificial intelligence", "data science", "computer science", "engineering")):
+            points += 4
+        if "currently pursuing" in lowered:
+            points += 3
+        if "diploma" in lowered:
+            points -= 3
+        if "class x" in lowered or "class 10" in lowered or "cbse" in lowered:
+            points -= 8
+        return points
+
+    best = max(cleaned_items, key=score)
+    return _shorten_education_for_writing(best)
+
+
 def summarize_education(education) -> str:
-    if isinstance(education, str):
-        items = [education]
-    else:
-        items = education or []
-
-    summaries = []
-    for item in items:
-        text = _clean_education_summary(normalize_text(item))
-        if text:
-            summaries.append(text)
-
-    if not summaries:
-        return ""
-    return min(summaries, key=len)[:180].strip(" -•\t.,")
+    return select_best_education(education)
 
 
 def extract_top_skills(resume_profile: dict, match_result: dict, limit: int = 5) -> list:
@@ -109,17 +122,46 @@ def extract_project_highlights(resume_profile: dict, limit: int = 2) -> list:
     highlights: list[str] = []
 
     for project in projects:
-        if isinstance(project, str):
-            project_text = normalize_text(project)
-        elif isinstance(project, dict):
-            project_text = _project_dict_to_text(project)
-        else:
-            project_text = _project_object_to_text(project)
+        project_text = summarize_project_for_writing(project)
 
         if project_text:
             highlights.append(project_text)
 
     return highlights[:limit]
+
+
+def summarize_project_for_writing(project: dict, max_words: int = 35) -> str:
+    if isinstance(project, str):
+        name = normalize_text(project)
+        description = ""
+        technologies = []
+    elif isinstance(project, dict):
+        name = normalize_text(project.get("name"))
+        description = normalize_text(project.get("description"))
+        technologies = [normalize_text(item) for item in project.get("technologies", []) if normalize_text(item)]
+    else:
+        name = normalize_text(getattr(project, "name", ""))
+        description = normalize_text(getattr(project, "description", ""))
+        technologies = [
+            normalize_text(item)
+            for item in getattr(project, "technologies", [])
+            if normalize_text(item)
+        ]
+
+    description = _remove_duplicate_project_title(name, description)
+    description = _important_project_sentence(description)
+    technology_text = _technology_text(technologies)
+
+    if name and description and technology_text:
+        summary = f"{name}, where I {description} using {technology_text}."
+    elif name and description:
+        summary = f"{name}, where I {description}."
+    elif name and technology_text:
+        summary = f"{name}, using {technology_text}."
+    else:
+        summary = name or description or technology_text
+
+    return _trim_words(summary, max_words)
 
 
 def extract_experience_highlights(resume_profile: dict, limit: int = 2) -> list:
@@ -164,7 +206,7 @@ def build_key_points(resume_profile: dict, job_profile: dict, match_result: dict
     if skills:
         key_points.append("Matched skills: " + ", ".join(skills))
     for project in projects:
-        key_points.append(f"Project: {project}")
+        key_points.append(f"Project: {_project_name_from_summary(project)}")
     for item in experience:
         key_points.append(f"Experience: {item}")
 
@@ -201,13 +243,11 @@ def _build_cover_letter(
     projects = extract_project_highlights(resume_profile, limit=2)
     experience = extract_experience_highlights(resume_profile, limit=2)
     learning_focus = _learning_focus(match_result, skill_gap_result)
-    role_phrase = _role_phrase(role_title)
-    if company_name:
-        role_phrase += f" at {company_name}"
+    role_phrase = _role_phrase(role_title, company_name)
 
     paragraphs = [
         "Dear Hiring Team,",
-        _opening_paragraph(role_phrase, education),
+        _opening_paragraph(role_title, company_name, role_phrase, education),
         _evidence_paragraph(skills, projects, experience),
         _growth_paragraph(learning_focus, role_phrase),
     ]
@@ -222,16 +262,22 @@ def _build_cover_letter(
     return "\n\n".join(paragraph for paragraph in paragraphs if paragraph)
 
 
-def _opening_paragraph(role_phrase: str, education: str) -> str:
-    if education:
+def _opening_paragraph(role_title: str, company_name: str, role_phrase: str, education: str) -> str:
+    if role_title.lower() in {"the internship role", "this internship"}:
+        first_sentence = "I am writing to apply for this internship opportunity."
+    elif role_title.lower() == "intern":
+        first_sentence = "I am writing to apply for the internship role."
+    elif company_name:
+        first_sentence = f"I am writing to apply for the {role_title} role at {company_name}."
+    else:
+        first_sentence = f"I am writing to apply for the {role_title} role."
+
+    if education and education != "my academic background":
         return (
-            f"I am writing to apply for {role_phrase}. I am currently pursuing {education}, "
-            "which gives me a strong foundation for approaching internship work with curiosity, structure, and consistency."
+            f"{first_sentence} My {education} background gives me a strong foundation for approaching "
+            "internship work with curiosity, structure, and consistency."
         )
-    return (
-        f"I am writing to apply for {role_phrase}. My current project work and learning path align with the responsibilities "
-        "of this opportunity."
-    )
+    return f"{first_sentence} My current project work and learning path align with the responsibilities of this opportunity."
 
 
 def _evidence_paragraph(skills: list, projects: list, experience: list) -> str:
@@ -240,9 +286,9 @@ def _evidence_paragraph(skills: list, projects: list, experience: list) -> str:
         sentences.append("My strongest matched skills include " + ", ".join(skills) + ".")
     if projects:
         if len(projects) == 1:
-            sentences.append(f"One relevant project is {projects[0]}.")
+            sentences.append(f"In my {projects[0]}")
         else:
-            sentences.append(f"Relevant projects include {projects[0]} and {projects[1]}.")
+            sentences.append(f"In my {projects[0]} I also worked on {projects[1]}")
     if experience:
         sentences.append("I also bring experience from " + "; ".join(experience) + ".")
     if not sentences:
@@ -283,7 +329,7 @@ def _medium_detail_paragraph(job_profile: dict, match_result: dict) -> str:
 def _build_opening_summary(resume_profile: dict, job_profile: dict) -> str:
     role_title = _safe_role_title(job_profile.get("role_title"), "the internship role")
     education = extract_education(resume_profile)
-    if education:
+    if education and education != "my academic background":
         return f"Candidate pursuing {education} and applying for {role_title}."
     return f"Candidate applying for {role_title}."
 
@@ -338,6 +384,25 @@ def _clean_education_summary(value: str) -> str:
     return text[:180].rsplit(" ", 1)[0].strip(" -•\t.,") if len(text) > 180 else text
 
 
+def _shorten_education_for_writing(value: str) -> str:
+    text = normalize_text(value)
+    stop_markers = (
+        "Chandigarh Group of Colleges",
+        "CGC",
+        "Landran",
+        "under",
+        "Currently Pursuing",
+        "PSBTE",
+        "CBSE",
+    )
+    for marker in stop_markers:
+        position = text.lower().find(marker.lower())
+        if position > 0:
+            text = text[:position].strip(" ,-—")
+            break
+    return text[:140].rsplit(" ", 1)[0].strip(" ,-—") if len(text) > 140 else text
+
+
 def _safe_role_title(value, fallback: str) -> str:
     role_title = normalize_text(value)
     suspicious_phrases = (
@@ -354,10 +419,55 @@ def _safe_role_title(value, fallback: str) -> str:
     return role_title
 
 
-def _role_phrase(role_title: str) -> str:
+def _role_phrase(role_title: str, company_name: str = "") -> str:
     if role_title.lower() in {"this internship", "the internship role"}:
         return role_title
-    return f"the {role_title} role"
+    if role_title.lower() == "intern":
+        phrase = "the internship role"
+    else:
+        phrase = f"the {role_title} role"
+    if company_name:
+        return f"{phrase} at {company_name}"
+    return phrase
+
+
+def _remove_duplicate_project_title(name: str, description: str) -> str:
+    if not description:
+        return ""
+    if name and description.lower().startswith(name.lower()):
+        description = description[len(name) :].strip(" :-,.;")
+    return description
+
+
+def _important_project_sentence(description: str) -> str:
+    if not description:
+        return ""
+    sentences = [sentence.strip(" .") for sentence in re.split(r"(?<=[.!?])\s+", description) if sentence.strip()]
+    priority_terms = ("accuracy", "built", "developed", "dashboard", "model", "forecast", "predict", "nlp")
+    selected = next((sentence for sentence in sentences if any(term in sentence.lower() for term in priority_terms)), sentences[0])
+    selected = re.sub(r"^(I\s+)?(built|developed|created|implemented|performed|conducted)\b", lambda match: match.group(2).lower(), selected, flags=re.IGNORECASE)
+    if " using " in selected.lower():
+        selected = re.split(r"\s+using\s+", selected, maxsplit=1, flags=re.IGNORECASE)[0]
+    return selected.strip(" .")
+
+
+def _technology_text(technologies: list) -> str:
+    unique_technologies = []
+    for technology in technologies:
+        if technology and technology.lower() not in [item.lower() for item in unique_technologies]:
+            unique_technologies.append(technology)
+    return ", ".join(unique_technologies[:5])
+
+
+def _trim_words(text: str, max_words: int) -> str:
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    return " ".join(words[:max_words]).rstrip(".,;:") + "."
+
+
+def _project_name_from_summary(summary: str) -> str:
+    return normalize_text(summary).split(",", 1)[0].strip(".")
 
 
 def _project_dict_to_text(project: dict) -> str:
