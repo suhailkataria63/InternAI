@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -11,7 +13,7 @@ class ResumeProfile(BaseModel):
     phone: str = ""
     education: list[str] = []
     skills: list[str] = []
-    projects: list[str] = []
+    projects: list[Any] = []
     experience: list[str] = []
     certifications: list[str] = []
     strengths: list[str] = []

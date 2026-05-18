@@ -72,12 +72,13 @@ def _score_project_relevance(resume_profile: dict, job_profile: dict) -> tuple[i
     relevant_project_count = 0
 
     for project in projects:
-        project_text = _normalize_text(project)
+        project_display = _project_to_display_text(project)
+        project_text = _normalize_text(project_display)
         matched_terms = [term for term in job_terms if term in project_text]
         if matched_terms:
             relevant_project_count += 1
             notes.append(
-                f"Project '{project}' matches job terms: {', '.join(_display_terms(matched_terms))}."
+                f"Project '{project_display}' matches job terms: {', '.join(_display_terms(matched_terms))}."
             )
 
     if relevant_project_count == 0:
@@ -202,6 +203,17 @@ def _normalize_list(items: list) -> list[str]:
 
 def _normalize_text(value: str) -> str:
     return re.sub(r"\s+", " ", value.lower()).strip()
+
+
+def _project_to_display_text(project) -> str:
+    if isinstance(project, dict):
+        parts = [
+            str(project.get("name", "")).strip(),
+            str(project.get("description", "")).strip(),
+            ", ".join(str(item) for item in project.get("technologies", []) if item),
+        ]
+        return " | ".join(part for part in parts if part)
+    return str(project)
 
 
 def _tokenize(value: str) -> set[str]:
