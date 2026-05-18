@@ -208,7 +208,13 @@ def extract_education(text: str, lines: list) -> list:
         for match in re.finditer(pattern, text, flags=re.IGNORECASE):
             education_items.append(match.group(1).strip())
 
-    return _unique_preserve_order(_clean_items(education_items))
+    cleaned_items = []
+    for item in education_items:
+        education = _clean_education_item(item)
+        if education:
+            cleaned_items.append(education)
+
+    return _unique_preserve_order(_clean_items(cleaned_items))
 
 
 def extract_skills(text: str) -> list:
@@ -412,6 +418,46 @@ def _looks_like_person_name(value: str) -> bool:
 def _contains_any(value: str, keywords) -> bool:
     lowered = value.lower()
     return any(str(keyword).lower() in lowered for keyword in keywords)
+
+
+def _clean_education_item(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value)).strip(" -•\t.")
+    if not text or not _contains_any(text, EDUCATION_KEYWORDS):
+        return ""
+
+    stop_phrases = (
+        "skills include",
+        "projects include",
+        "another project",
+        "experience includes",
+        "he has skills",
+        "she has skills",
+        "i have skills",
+    )
+    stop_positions = [
+        text.lower().find(phrase)
+        for phrase in stop_phrases
+        if text.lower().find(phrase) != -1
+    ]
+    if stop_positions:
+        text = text[: min(stop_positions)].strip(" -•\t.,")
+
+    sentence_match = re.search(
+        r"([^.!?\n]*(?:b\.?tech|bachelor|artificial intelligence|data science|ai&ds|ai and ds)[^.!?\n]*)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if sentence_match:
+        text = sentence_match.group(1).strip(" -•\t.,")
+
+    text = re.sub(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\s+is\s+pursuing\s+", "", text)
+    text = re.sub(r"^(?:he|she|i)\s+is\s+pursuing\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^pursuing\s+", "", text, flags=re.IGNORECASE)
+
+    if len(text) > 220:
+        text = text[:220].rsplit(" ", 1)[0].strip(" -•\t.,")
+
+    return text
 
 
 def _skill_alias_found(lowered_text: str, alias: str) -> bool:

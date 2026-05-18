@@ -71,10 +71,24 @@ def extract_candidate_name(resume_profile: dict) -> str:
 
 
 def extract_education(resume_profile: dict) -> str:
-    education = resume_profile.get("education", [])
-    if not education:
+    return summarize_education(resume_profile.get("education", []))
+
+
+def summarize_education(education) -> str:
+    if isinstance(education, str):
+        items = [education]
+    else:
+        items = education or []
+
+    summaries = []
+    for item in items:
+        text = _clean_education_summary(normalize_text(item))
+        if text:
+            summaries.append(text)
+
+    if not summaries:
         return ""
-    return normalize_text(education[0])
+    return min(summaries, key=len)[:180].strip(" -•\t.,")
 
 
 def extract_top_skills(resume_profile: dict, match_result: dict, limit: int = 5) -> list:
@@ -126,7 +140,7 @@ def extract_experience_highlights(resume_profile: dict, limit: int = 2) -> list:
 
 
 def build_subject_line(job_profile: dict) -> str:
-    role_title = normalize_text(job_profile.get("role_title")) or "Internship"
+    role_title = _safe_role_title(job_profile.get("role_title"), "the internship role")
     company_name = normalize_text(job_profile.get("company_name"))
     if company_name:
         return f"Application for {role_title} at {company_name}"
@@ -136,7 +150,7 @@ def build_subject_line(job_profile: dict) -> str:
 def build_key_points(resume_profile: dict, job_profile: dict, match_result: dict) -> list:
     key_points = []
     education = extract_education(resume_profile)
-    role_title = normalize_text(job_profile.get("role_title")) or "the internship role"
+    role_title = _safe_role_title(job_profile.get("role_title"), "the internship role")
     company_name = normalize_text(job_profile.get("company_name"))
     skills = extract_top_skills(resume_profile, match_result)
     projects = extract_project_highlights(resume_profile)
@@ -180,14 +194,14 @@ def _build_cover_letter(
     skill_gap_result: dict,
     length: str,
 ) -> str:
-    role_title = normalize_text(job_profile.get("role_title")) or "the internship role"
+    role_title = _safe_role_title(job_profile.get("role_title"), "the internship role")
     company_name = normalize_text(job_profile.get("company_name"))
     education = extract_education(resume_profile)
     skills = extract_top_skills(resume_profile, match_result, limit=4)
     projects = extract_project_highlights(resume_profile, limit=2)
     experience = extract_experience_highlights(resume_profile, limit=2)
     learning_focus = _learning_focus(match_result, skill_gap_result)
-    role_phrase = f"the {role_title} role"
+    role_phrase = _role_phrase(role_title)
     if company_name:
         role_phrase += f" at {company_name}"
 
@@ -211,11 +225,11 @@ def _build_cover_letter(
 def _opening_paragraph(role_phrase: str, education: str) -> str:
     if education:
         return (
-            f"I am interested in {role_phrase}. My education in {education} gives me a strong foundation "
-            "for approaching internship work with curiosity, structure, and consistency."
+            f"I am writing to apply for {role_phrase}. I am currently pursuing {education}, "
+            "which gives me a strong foundation for approaching internship work with curiosity, structure, and consistency."
         )
     return (
-        f"I am interested in {role_phrase}. My current project work and learning path align with the responsibilities "
+        f"I am writing to apply for {role_phrase}. My current project work and learning path align with the responsibilities "
         "of this opportunity."
     )
 
@@ -267,10 +281,10 @@ def _medium_detail_paragraph(job_profile: dict, match_result: dict) -> str:
 
 
 def _build_opening_summary(resume_profile: dict, job_profile: dict) -> str:
-    role_title = normalize_text(job_profile.get("role_title")) or "the internship role"
+    role_title = _safe_role_title(job_profile.get("role_title"), "the internship role")
     education = extract_education(resume_profile)
     if education:
-        return f"Candidate with education in {education} applying for {role_title}."
+        return f"Candidate pursuing {education} and applying for {role_title}."
     return f"Candidate applying for {role_title}."
 
 
@@ -294,12 +308,66 @@ def _fit_length(text: str, length: str) -> str:
     return trimmed + "."
 
 
+def _clean_education_summary(value: str) -> str:
+    text = re.sub(r"\s+", " ", value).strip(" -•\t.,")
+    stop_phrases = (
+        "skills include",
+        "projects include",
+        "another project",
+        "experience includes",
+        "he has skills",
+        "she has skills",
+        "i have skills",
+    )
+    lowered = text.lower()
+    stop_positions = [lowered.find(phrase) for phrase in stop_phrases if lowered.find(phrase) != -1]
+    if stop_positions:
+        text = text[: min(stop_positions)].strip(" -•\t.,")
+
+    sentence_match = re.search(
+        r"([^.!?]*(?:b\.?tech|bachelor|computer science|artificial intelligence|data science|ai&ds|ai and ds)[^.!?]*)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if sentence_match:
+        text = sentence_match.group(1).strip(" -•\t.,")
+
+    text = re.sub(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\s+is\s+pursuing\s+", "", text)
+    text = re.sub(r"^(?:he|she|i)\s+is\s+pursuing\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^pursuing\s+", "", text, flags=re.IGNORECASE)
+    return text[:180].rsplit(" ", 1)[0].strip(" -•\t.,") if len(text) > 180 else text
+
+
+def _safe_role_title(value, fallback: str) -> str:
+    role_title = normalize_text(value)
+    suspicious_phrases = (
+        "deployment experience",
+        "the internship",
+        "required skills",
+        "preferred skills",
+        "responsibilities",
+        "candidate should",
+        "selected intern",
+    )
+    if not role_title or any(phrase in role_title.lower() for phrase in suspicious_phrases):
+        return fallback
+    return role_title
+
+
+def _role_phrase(role_title: str) -> str:
+    if role_title.lower() in {"this internship", "the internship role"}:
+        return role_title
+    return f"the {role_title} role"
+
+
 def _project_dict_to_text(project: dict) -> str:
     name = normalize_text(project.get("name"))
     description = normalize_text(project.get("description"))
     technologies = project.get("technologies", [])
     technology_text = ", ".join(normalize_text(item) for item in technologies if item)
 
+    if name and description.lower() == name.lower():
+        description = ""
     if name and description and technology_text:
         return f"{name}, which {description.lower()}, using {technology_text}"
     if name and description:

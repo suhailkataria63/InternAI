@@ -102,6 +102,26 @@ def extract_project_highlights(resume_profile: dict, limit: int = 2) -> list:
     return highlights[:limit]
 
 
+def summarize_education(education) -> str:
+    if isinstance(education, str):
+        items = [education]
+    else:
+        items = education or []
+
+    summaries = []
+    for item in items:
+        text = normalize_text(item)
+        if not text:
+            continue
+        text = _clean_education_summary(text)
+        if text:
+            summaries.append(text)
+
+    if not summaries:
+        return ""
+    return min(summaries, key=len)[:180].strip(" -•\t.,")
+
+
 def detect_question_type(application_question: str) -> str:
     question = normalize_text(application_question).lower()
 
@@ -123,8 +143,8 @@ def build_key_points(
     skill_gap_result: dict,
 ) -> list:
     key_points = []
-    education = _first_item(resume_profile.get("education", []))
-    role_title = normalize_text(job_profile.get("role_title")) or "the internship role"
+    education = summarize_education(resume_profile.get("education", []))
+    role_title = _safe_role_title(job_profile.get("role_title"), "this internship")
     top_skills = extract_top_skills(resume_profile, match_result)
     projects = extract_project_highlights(resume_profile)
     missing_skills = match_result.get("missing_skills", [])
@@ -187,14 +207,14 @@ def _build_answer_by_type(
     match_result: dict,
     skill_gap_result: dict,
 ) -> str:
-    role_title = normalize_text(job_profile.get("role_title")) or "this internship"
+    role_title = _safe_role_title(job_profile.get("role_title"), "this internship")
     company_name = normalize_text(job_profile.get("company_name"))
-    education = _first_item(resume_profile.get("education", []))
+    education = summarize_education(resume_profile.get("education", []))
     skills = extract_top_skills(resume_profile, match_result, limit=4)
     projects = extract_project_highlights(resume_profile)
     learning_focus = _learning_focus(match_result, skill_gap_result)
 
-    role_phrase = f"the {role_title} role"
+    role_phrase = _role_phrase(role_title)
     if company_name:
         role_phrase += f" at {company_name}"
 
@@ -240,7 +260,9 @@ def _build_answer_by_type(
 
 def _context_sentence(education: str, role_phrase: str) -> str:
     if education:
-        return f"I am a candidate with education in {education}, applying for {role_phrase}."
+        if re.search(r"\b(pursuing|student|semester|year)\b", education, re.IGNORECASE):
+            return f"I am currently pursuing {education}, and I am applying for {role_phrase}."
+        return f"My background in {education} connects well with {role_phrase}."
     return f"I am applying for {role_phrase}."
 
 
@@ -290,12 +312,66 @@ def _first_item(items: list) -> str:
     return normalize_text(items[0])
 
 
+def _clean_education_summary(value: str) -> str:
+    text = re.sub(r"\s+", " ", value).strip(" -•\t.,")
+    stop_phrases = (
+        "skills include",
+        "projects include",
+        "another project",
+        "experience includes",
+        "he has skills",
+        "she has skills",
+        "i have skills",
+    )
+    lowered = text.lower()
+    stop_positions = [lowered.find(phrase) for phrase in stop_phrases if lowered.find(phrase) != -1]
+    if stop_positions:
+        text = text[: min(stop_positions)].strip(" -•\t.,")
+
+    sentence_match = re.search(
+        r"([^.!?]*(?:b\.?tech|bachelor|computer science|artificial intelligence|data science|ai&ds|ai and ds)[^.!?]*)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if sentence_match:
+        text = sentence_match.group(1).strip(" -•\t.,")
+
+    text = re.sub(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}\s+is\s+pursuing\s+", "", text)
+    text = re.sub(r"^(?:he|she|i)\s+is\s+pursuing\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^pursuing\s+", "", text, flags=re.IGNORECASE)
+    return text[:180].rsplit(" ", 1)[0].strip(" -•\t.,") if len(text) > 180 else text
+
+
+def _safe_role_title(value, fallback: str) -> str:
+    role_title = normalize_text(value)
+    suspicious_phrases = (
+        "deployment experience",
+        "the internship",
+        "required skills",
+        "preferred skills",
+        "responsibilities",
+        "candidate should",
+        "selected intern",
+    )
+    if not role_title or any(phrase in role_title.lower() for phrase in suspicious_phrases):
+        return fallback
+    return role_title
+
+
+def _role_phrase(role_title: str) -> str:
+    if role_title.lower() in {"this internship", "the internship role"}:
+        return role_title
+    return f"the {role_title} role"
+
+
 def _project_dict_to_text(project: dict) -> str:
     name = normalize_text(project.get("name"))
     description = normalize_text(project.get("description"))
     technologies = project.get("technologies", [])
     technology_text = ", ".join(normalize_text(item) for item in technologies if item)
 
+    if name and description.lower() == name.lower():
+        description = ""
     if name and description and technology_text:
         return f"{name}, which {description.lower()}, using {technology_text}"
     if name and description:

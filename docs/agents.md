@@ -40,6 +40,7 @@ Internal logic:
 - Extracts candidate name from `Name:` labels, first meaningful lines, and phrases such as `I am...`, `My name is...`, and `Suhail Kataria is pursuing...`.
 - Avoids using degree names, project names, section headings, and skill names as candidate names.
 - Detects education from section headings and paragraph keywords such as `B.Tech`, `Bachelor`, `Artificial Intelligence`, `Data Science`, `AI&DS`, `3rd Year`, `6th Semester`, `CGC Landran`, `Chandigarh Group of Colleges`, and `IKGPTU`.
+- Cleans education entries by stopping before resume-content phrases such as `Skills include`, `Projects include`, `Another project`, and `Experience includes`, then caps long education entries before they reach writer agents.
 - Detects expanded technical skills including Python, JavaScript, TypeScript, React, Next.js, Node.js, FastAPI, Django, Flask, Machine Learning, Deep Learning, NLP, SQL, PostgreSQL, SQLite, Pandas, NumPy, Scikit-learn, TensorFlow, PyTorch, LangChain, LangGraph, CrewAI, RAG, AI Agents, Docker, Git, GitHub, REST API, Tailwind CSS, HTML, and CSS.
 - Extracts projects from sections, bullet-style lines, and paragraph phrases such as `Projects include...`, `Project: ...`, and `Another project is...`.
 - Returns projects as structured objects with `name`, `description`, and `technologies`.
@@ -100,7 +101,8 @@ Output:
 Internal logic:
 
 - Normalizes pasted job description text into clean lines.
-- Extracts role title from labels such as `Role` and `Position`, and from phrases such as `hiring an AI/ML Intern`, `applying for the X role`, and `X internship`.
+- Extracts role title from labels such as `Role` and `Position`, and from phrases such as `hiring an AI/ML Intern`, `hiring for AI/ML Intern`, `applying for the X role`, and `AI/ML Intern for 6 months`.
+- Cleans role titles by removing trailing work-mode/duration/context phrases and rejecting noisy matches such as `deployment experience`, `the internship`, `required skills`, `responsibilities`, `candidate should`, and `selected intern`.
 - Extracts company name from labels such as `Company`, from `Example AI Startup is hiring...`, or from `at Example AI Startup`.
 - Uses a centralized skill dictionary covering frontend, backend, AI/ML, data, API, Git, Docker, and soft-skill terms.
 - Treats skills as required only when they appear near required phrases such as `required skills`, `must have`, `mandatory`, `candidate should have`, `should know`, `need experience in`, or `strong knowledge of`.
@@ -328,8 +330,10 @@ Tone options:
 Internal logic:
 
 - Detects the application question type from simple keyword patterns.
-- Extracts candidate education, target role, matched skills, relevant projects, and learning focus.
+- Extracts a summarized education entry, clean target role, matched skills, relevant projects, and learning focus.
+- Falls back to `this internship` when the role title is empty or suspicious.
 - Selects a template based on the question type.
+- Uses natural phrasing such as `I am currently pursuing...` instead of generic candidate wording.
 - Mentions missing skills only as learning goals, not mastered skills.
 - Applies a simple tone transformation.
 - Trims the answer to the requested word limit when possible.
@@ -395,7 +399,8 @@ Internal logic:
 
 - Builds a subject line from the target role and company.
 - Starts the letter with `Dear Hiring Team,`.
-- Mentions target role, company, education, matched skills, relevant projects, and experience when available.
+- Mentions target role, company, summarized education, matched skills, relevant projects, and experience when available.
+- Falls back to `the internship role` when the role title is empty or suspicious.
 - Mentions missing skills only as active learning areas.
 - Adds a polite closing.
 - Applies simple tone transformations.

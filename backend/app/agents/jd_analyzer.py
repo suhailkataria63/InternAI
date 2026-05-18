@@ -187,19 +187,25 @@ def split_lines(text: str) -> list:
 def extract_role_title(text: str, lines: list) -> str:
     patterns = (
         r"(?:role|position|title|job title)\s*:\s*([^\n.]+)",
-        r"hiring\s+(?:an?|for\s+an?|for\s+the\s+)?([A-Za-z0-9/ .+-]+?\b(?:intern|internship|developer|engineer|analyst|associate))\b",
+        r"hiring\s+(?:an?|for\s+)?([A-Za-z0-9/ .+-]+?\b(?:intern|developer|engineer|analyst|associate))\b",
+        r"\b([A-Za-z0-9/ .+-]+?\b(?:intern|developer|engineer|analyst|associate))\s+for\s+\d+\s*(?:weeks?|months?|years?)\b",
         r"applying\s+for\s+the\s+([A-Za-z0-9/ .+-]+?)\s+role\b",
-        r"\b([A-Za-z0-9/ .+-]+?\s+internship)\b",
     )
     for pattern in patterns:
         match = re.search(pattern, text, flags=re.IGNORECASE)
         if match:
-            return _title_case_role(_clean_inline_value(match.group(1)))
+            role_title = _clean_role_title(match.group(1), text)
+            if role_title:
+                return role_title
 
     for line in lines[:6]:
-        if re.search(r"\b(intern|internship|developer|engineer|analyst|associate)\b", line, re.IGNORECASE):
-            return _title_case_role(_clean_inline_value(line))
-    return ""
+        if "selected intern" in line.lower():
+            continue
+        if re.search(r"\b(intern|developer|engineer|analyst|associate)\b", line, re.IGNORECASE):
+            role_title = _clean_role_title(line, text)
+            if role_title:
+                return role_title
+    return _fallback_role_title(text)
 
 
 def extract_company_name(text: str, lines: list) -> str:
@@ -479,6 +485,48 @@ def _extract_first_match(text: str, patterns: tuple[str, ...]) -> str:
 def _clean_inline_value(value: str) -> str:
     value = re.split(r"\n|;", value, maxsplit=1)[0]
     return value.strip(" -•\t:,.")
+
+
+def _clean_role_title(value: str, full_text: str) -> str:
+    cleaned = _clean_inline_value(value)
+    cleaned = re.split(
+        r"\b(?:for\s+\d+\s*(?:weeks?|months?|years?)|remote|with|required|preferred|responsibilities)\b",
+        cleaned,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0]
+    cleaned = re.sub(r"\b(?:the\s+)?internship\b.*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = cleaned.strip(" -•\t:,.")
+
+    invalid_phrases = (
+        "deployment experience",
+        "the internship",
+        "required skills",
+        "preferred skills",
+        "responsibilities",
+        "candidate should",
+        "selected intern",
+    )
+    lowered = cleaned.lower()
+    if not cleaned or any(phrase in lowered for phrase in invalid_phrases):
+        return _fallback_role_title(full_text)
+    if not re.search(r"\b(intern|developer|engineer|analyst|associate)\b", cleaned, re.IGNORECASE):
+        return _fallback_role_title(full_text)
+    return _title_case_role(cleaned)
+
+
+def _fallback_role_title(text: str) -> str:
+    fallback_patterns = (
+        (r"\bAI\s*/?\s*ML\s+Intern\b", "AI/ML Intern"),
+        (r"\bData Science Intern\b", "Data Science Intern"),
+        (r"\bSoftware Intern\b", "Software Intern"),
+    )
+    for pattern, title in fallback_patterns:
+        if re.search(pattern, text, flags=re.IGNORECASE):
+            return title
+    if re.search(r"\bintern(?:ship)?\b", text, flags=re.IGNORECASE):
+        return "Intern"
+    return ""
 
 
 def _title_case_role(value: str) -> str:

@@ -181,7 +181,7 @@ The Resume Analyzer Agent receives raw text, usually from the resume PDF upload 
 
 Input: raw resume text in the `resume_text` field.
 
-Processing: the current implementation uses improved rule-based extraction for labels, section headings, and paragraph-style text. It detects names from `Name:` labels, first meaningful lines, and phrases such as `Suhail Kataria is pursuing...`; detects education keywords like `B.Tech`, `AI&DS`, `CGC Landran`, and `IKGPTU`; extracts expanded technical skills; detects projects from bullet lines and phrases like `Projects include...`; and returns projects as structured objects with `name`, `description`, and `technologies`.
+Processing: the current implementation uses improved rule-based extraction for labels, section headings, and paragraph-style text. It detects names from `Name:` labels, first meaningful lines, and phrases such as `Suhail Kataria is pursuing...`; detects education keywords like `B.Tech`, `AI&DS`, `CGC Landran`, and `IKGPTU`; cleans education entries so full resume paragraphs do not flow into downstream writing; extracts expanded technical skills; detects projects from bullet lines and phrases like `Projects include...`; and returns projects as structured objects with `name`, `description`, and `technologies`.
 
 Output: a normalized `profile` object that can be reused by future Profile, Opportunity, Resume, and Interview agents.
 
@@ -242,7 +242,7 @@ The JD Analyzer Agent receives pasted internship or job description text and con
 
 Input: raw job description text in the `job_description` field.
 
-Processing: the current implementation uses improved rule-based extraction for role title, company, required skills, preferred skills, responsibilities, eligibility, stipend, duration, location, work mode, and keywords. It separates required skills from preferred skills by looking for phrases such as `required skills`, `must have`, and `candidate should have` versus `preferred skills`, `good to have`, `nice to have`, and `familiarity with`. If a skill appears only in a preferred section, it stays out of `required_skills`; if it appears in both places, the required classification wins.
+Processing: the current implementation uses improved rule-based extraction for role title, company, required skills, preferred skills, responsibilities, eligibility, stipend, duration, location, work mode, and keywords. It prioritizes clean role patterns such as `hiring an AI/ML Intern` and `role: AI/ML Intern`, rejects noisy phrases such as `deployment experience` or `selected intern`, and separates required skills from preferred skills by looking for phrases such as `required skills`, `must have`, and `candidate should have` versus `preferred skills`, `good to have`, `nice to have`, and `familiarity with`.
 
 Output: a normalized `job_profile` object that future matching agents can compare against the parsed resume profile.
 
@@ -523,7 +523,7 @@ The Application Writer Agent creates customized internship application answers u
 
 Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, `application_question`, optional `tone`, and optional `word_limit`.
 
-Processing: the current implementation detects the question type, selects a template, inserts education, target role, matched skills, relevant projects, and learning focus, then applies tone and trims to the requested word limit. It avoids claiming missing skills as already mastered.
+Processing: the current implementation detects the question type, selects a template, inserts a cleaned education summary, target role, matched skills, relevant projects, and learning focus, then applies tone and trims to the requested word limit. It avoids suspicious role titles, avoids claiming missing skills as already mastered, and uses natural phrasing such as `I am currently pursuing...`.
 
 Output: the original question, generated answer, key points used, tone, word count, and an improvement note.
 
@@ -568,9 +568,9 @@ Expected response shape:
 
 ```json
 {
-  "cover_letter": "Dear Hiring Team,\n\nI am interested in the Software Engineering Intern role at Acme Labs...",
+  "cover_letter": "Dear Hiring Team,\n\nI am writing to apply for the Software Engineering Intern role at Acme Labs...",
   "subject_line": "Application for Software Engineering Intern at Acme Labs",
-  "opening_summary": "Candidate with education in B.S. Computer Science applying for Software Engineering Intern.",
+  "opening_summary": "Candidate pursuing B.S. Computer Science and applying for Software Engineering Intern.",
   "key_points_used": [
     "Target role: Software Engineering Intern",
     "Company: Acme Labs",
@@ -587,7 +587,7 @@ The Cover Letter Agent generates a customized internship cover letter using the 
 
 Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, optional `tone`, and optional `length`.
 
-Processing: the current implementation builds a subject line, opening summary, role-specific body, matched skill evidence, project and experience highlights, and a learning-gap sentence. It starts with `Dear Hiring Team,`, ends politely, and avoids presenting missing skills as already mastered.
+Processing: the current implementation builds a subject line, opening summary, role-specific body, cleaned education summary, matched skill evidence, project and experience highlights, and a learning-gap sentence. It starts with `Dear Hiring Team,`, uses clean role-title fallbacks, ends politely, and avoids presenting missing skills as already mastered.
 
 Output: `cover_letter`, `subject_line`, `opening_summary`, `key_points_used`, `tone`, and `word_count`.
 
