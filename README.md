@@ -314,17 +314,57 @@ The Match Scoring Agent compares a parsed resume profile with a parsed job profi
 
 Scoring formula:
 
-- Required skill match: 50 points
-- Preferred skill match: 15 points
-- Project relevance: 20 points
-- Education and role relevance: 10 points
-- Experience and certifications: 5 points
+| Category | Weight | Notes |
+| --- | ---: | --- |
+| Required skill match | 45 | Compares resume skills to `job_profile.required_skills`; missing required skills have the biggest impact. |
+| Preferred skill match | 15 | Compares resume skills to `job_profile.preferred_skills`; missing preferred skills are lower priority. |
+| Project relevance | 20 | Checks project names, descriptions, and technologies against skills, role title, and responsibilities. |
+| Education relevance | 10 | Rewards relevant degree, engineering, CS, AI, data science, ML, year, and semester signals. |
+| Experience/certifications | 10 | Rewards internship, AI/ML, software/development experience, and relevant certifications. |
+
+Match levels:
+
+| Score | Level |
+| --- | --- |
+| 85-100 | Excellent Fit |
+| 70-84 | Strong Fit |
+| 50-69 | Good Fit |
+| 30-49 | Partial Fit |
+| 0-29 | Weak Fit |
 
 Input: a `resume_profile` object from the Resume Analyzer Agent and a `job_profile` object from the JD Analyzer Agent.
 
-Processing: the agent normalizes skills, calculates weighted overlap, checks project text against job keywords and responsibilities, and adds small relevance scores for education, experience, and certifications.
+Processing: the agent normalizes skills, applies simple aliases such as `ML` to `Machine Learning`, `JS` to `JavaScript`, `NextJS` to `Next.js`, and `REST` to `REST API`, calculates separate required and preferred skill overlap, checks project text against job keywords and responsibilities, and scores education, experience, and certifications with explainable notes.
 
-Output: a score, match level, matched skills, missing required skills, project relevance notes, and a recommendation.
+Output: a score, match level, matched skills, missing skills, project relevance notes, a practical recommendation, and a `score_breakdown` with separate required/preferred match percentages.
+
+Example match output:
+
+```json
+{
+  "match_score": 76,
+  "match_level": "Strong Fit",
+  "matched_skills": ["Python", "Machine Learning", "Backend Development"],
+  "missing_skills": ["REST API", "Next.js", "Docker"],
+  "project_relevance_notes": [
+    "Project 'Hybrid Phishing Detection System' is relevant because it uses required skills: Python, Machine Learning, REST API, shows relevant domain signals: AI, Dashboard."
+  ],
+  "recommendation": "Good match; strengthen minor required gaps before applying: REST API.",
+  "score_breakdown": {
+    "required_skills": 34,
+    "preferred_skills": 5,
+    "project_relevance": 18,
+    "education_relevance": 10,
+    "experience_certifications": 9
+  },
+  "required_skill_match_percentage": 75,
+  "preferred_skill_match_percentage": 33,
+  "matched_required_skills": ["Python", "Machine Learning", "Backend Development"],
+  "missing_required_skills": ["REST API"],
+  "matched_preferred_skills": ["Frontend Development"],
+  "missing_preferred_skills": ["Next.js", "Docker"]
+}
+```
 
 Analyze skill gaps and generate a learning plan:
 

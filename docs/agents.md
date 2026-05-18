@@ -166,33 +166,52 @@ Output:
   "matched_skills": [],
   "missing_skills": [],
   "project_relevance_notes": [],
-  "recommendation": ""
+  "recommendation": "",
+  "score_breakdown": {},
+  "required_skill_match_percentage": 0,
+  "preferred_skill_match_percentage": 0,
+  "matched_required_skills": [],
+  "missing_required_skills": [],
+  "matched_preferred_skills": [],
+  "missing_preferred_skills": []
 }
 ```
 
 Scoring formula:
 
-- Required skill match: 50 points
+- Required skill match: 45 points
 - Preferred skill match: 15 points
 - Project relevance: 20 points
 - Education and role relevance: 10 points
-- Experience and certifications: 5 points
+- Experience and certifications: 10 points
+
+Match levels:
+
+- 85-100: Excellent Fit
+- 70-84: Strong Fit
+- 50-69: Good Fit
+- 30-49: Partial Fit
+- 0-29: Weak Fit
 
 Internal logic:
 
 - Normalizes resume skills and job skills for case-insensitive comparison.
-- Awards required skill points in proportion to matched required skills.
-- Awards preferred skill points in proportion to matched preferred skills.
-- Checks resume project text against job skills, keywords, role terms, and responsibilities.
-- Checks whether education terms overlap with role or eligibility terms.
-- Awards a small score for experience or certifications, with more weight when they overlap with job terms.
-- Generates a recommendation based on missing required skills and project relevance.
+- Supports common aliases such as `ML` and `AI/ML` for `Machine Learning`, `JS` for `JavaScript`, `TS` for `TypeScript`, `NextJS` for `Next.js`, and `REST` for `REST API`.
+- Treats frontend/backend category skills as relevant to concrete skills such as React, Next.js, FastAPI, Django, and Flask.
+- Scores required skills separately from preferred skills and returns separate matched/missing lists for each group.
+- Gives a neutral 25/45 required-skill score when the job description has no explicit required skills.
+- Gives full preferred-skill points when no preferred skills are listed because preferred skills are optional.
+- Checks resume project names, descriptions, and technologies against required skills, preferred skills, responsibilities, role title, and domain terms such as AI, ML, backend, frontend, API, dashboard, data, model, NLP, RAG, agent, and deployment.
+- Scores education using B.Tech, Bachelor, Computer Science, AI, Data Science, Machine Learning, Engineering, degree/year, and eligibility overlap.
+- Scores experience and certifications using internship, AI/ML, data, software/development, and certification evidence.
+- Generates practical recommendations based on score level, missing required skills, missing preferred skills, and project evidence.
 
 Current limitations:
 
 - The score is deterministic and transparent, but not yet based on learned hiring outcomes.
 - Project relevance uses keyword overlap, so it may miss deeper semantic similarity.
 - Missing skills are based on the resume `skills` list, even when a skill appears only inside a project description.
+- Alias matching is intentionally conservative; for example, `DB` does not automatically match SQL.
 
 Future improvements:
 
