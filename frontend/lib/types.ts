@@ -29,6 +29,22 @@ export type MatchResult = {
   missing_skills?: string[];
   project_relevance_notes?: string[];
   recommendation?: string;
+  score_breakdown?: {
+    required_skills?: number;
+    preferred_skills?: number;
+    project_relevance?: number;
+    education_relevance?: number;
+    experience_certifications?: number;
+    education_note?: string;
+    experience_note?: string;
+    [key: string]: unknown;
+  };
+  required_skill_match_percentage?: number;
+  preferred_skill_match_percentage?: number;
+  matched_required_skills?: string[];
+  missing_required_skills?: string[];
+  matched_preferred_skills?: string[];
+  missing_preferred_skills?: string[];
 };
 
 export type PrioritySkill = {
