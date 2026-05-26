@@ -269,12 +269,24 @@ Output:
   "learning_roadmap": [],
   "resume_improvement_suggestions": [],
   "recommended_projects": [],
-  "overall_advice": ""
+  "overall_advice": "",
+  "generation_source": "rule_based",
+  "llm_provider": "mock",
+  "used_fallback": true
 }
 ```
 
 Internal logic:
 
+- Creates the rule-based skill gap plan first so there is always a reliable fallback.
+- Uses `LLMService` only when a non-mock provider such as Gemini or Groq is configured.
+- Prompts the LLM for strict JSON containing `priority_skills`, `learning_roadmap`, `resume_improvement_suggestions`, `recommended_projects`, and `overall_advice`.
+- Grounds the prompt with target role, company, required skills, matched skills, missing skills, current projects, education, and the rule-based roadmap baseline.
+- Requires 4-6 grouped roadmap weeks when there are four or more missing skills.
+- Parses markdown-fenced JSON safely and never crashes the orchestrator on invalid JSON.
+- Validates that required JSON fields exist, the roadmap is complete enough for the number of gaps, and priority/roadmap skills stay grounded in missing skills from the match result.
+- Repairs otherwise valid but too-short LLM roadmaps by grouping related skills such as `Node.js` + `Express.js`, `REST API` + `Debugging`, frontend structure skills, and project-polish skills.
+- Falls back to the rule-based plan whenever mock mode is active, provider keys are missing, provider requests fail, JSON parsing fails, or validation fails.
 - Reads `missing_skills` from the Match Scoring Agent output.
 - Compares each missing skill against `job_profile.required_skills` and `job_profile.preferred_skills`.
 - Marks required missing skills as `High` priority.
@@ -288,14 +300,14 @@ Internal logic:
 
 Current limitations:
 
-- The agent is rule-based and does not yet personalize based on user schedule or learning style.
+- LLM-enhanced advice still needs human review before being treated as a final study plan.
 - Learning time estimates are simple defaults by priority.
 - Mini-project recommendations are generated from skill gaps and role title, not from a full project catalog.
 
 Future LLM upgrade:
 
-- Use an LLM to create more personalized learning plans.
-- Generate role-specific project briefs with milestones.
+- Add user schedule and deadline inputs for more personalized planning.
+- Generate project briefs with milestones and acceptance criteria from richer portfolio context.
 - Convert roadmap items into calendar tasks.
 - Suggest exact resume bullet rewrites after the project is completed.
 

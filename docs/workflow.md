@@ -65,6 +65,8 @@ Improved match scoring gives the Skill Gap Agent cleaner missing required and pr
 
 Before scoring, resume skills and JD skills are normalized into canonical names so variants such as `AI`/`Artificial Intelligence`, `NLP`/`Natural Language Processing`, `React.js`/`React`, and `Scikit-Learn`/`Scikit-learn` compare cleanly. Exact required-skill scoring stays conservative, while related evidence can still improve project relevance notes.
 
+After match scoring, the Skill Gap Agent creates a rule-based roadmap first, then can optionally ask `LLMService` for strict JSON skill-gap advice when a real provider is configured. The LLM roadmap is validated for completeness before it is returned; when there are four or more missing skills, a one-week roadmap is repaired into grouped practical weeks or rejected. If the provider is unavailable, returns invalid JSON, or suggests unrelated skills, InternAI keeps the rule-based roadmap so the frontend and orchestrator remain stable.
+
 Final writing output is generated from the cleaned `resume_profile`, structured `job_profile`, `match_result`, and `skill_gap_result`. The Application Writer and Cover Letter agents choose the strongest education entry, use concise project summaries, highlight matched skills, and frame missing skills as learning focus instead of claiming them as mastered.
 
 Before the orchestrator response is returned to the frontend, backend agents polish display-facing fields: JD company and eligibility fields are cleaned, skill names use canonical casing in skill gaps and summaries, and generated writing uses compact education and project evidence.
@@ -80,23 +82,24 @@ InternAI now has an LLM service boundary, but the main pipeline remains rule-bas
 | Resume parsing | Rule-based section and keyword extraction | LLM can enrich structured profile fields with validation |
 | JD parsing | Rule-based role, company, skill, and requirement extraction | LLM can improve messy job descriptions |
 | Match scoring | Deterministic weighted scoring | LLM can add semantic project relevance notes |
-| Skill gap planning | Rule-based priorities and roadmap | LLM can personalize learning tasks |
+| Skill gap planning | Rule-based fallback plus optional LLM JSON advice | LLM can personalize learning tasks and mini-projects |
 | Application writing | Rule-based fallback plus optional LLM generation | LLM can generate more natural grounded drafts |
 | Cover letter writing | Rule-based fallback plus optional LLM generation | LLM can create richer company-specific letters |
 
 Current and future agent flow:
 
 1. Rule-based agents create structured resume and job profiles.
-2. Match and skill-gap agents add structured evidence, missing skills, and learning focus.
-3. Application Writer and Cover Letter agents create rule-based drafts first.
-4. When a real provider is configured, they call `LLMService.generate_text(...)` with grounded system and user prompts.
-5. The configured provider, such as Gemini or Groq, returns generated text, or mock/fallback mode returns a safe placeholder.
-6. The backend validates and cleans generated writing before returning it to the frontend.
-7. If the provider is unavailable or the generated writing is invalid, the rule-based application answer or cover letter is returned instead.
+2. Match scoring adds structured evidence and missing skills.
+3. Skill Gap creates a rule-based roadmap first, then optionally enhances roadmap, resume suggestions, and project ideas through strict LLM JSON.
+4. Application Writer and Cover Letter agents create rule-based drafts first.
+5. When a real provider is configured, LLM-powered agents call `LLMService.generate_text(...)` with grounded system and user prompts.
+6. The configured provider, such as Gemini or Groq, returns generated text or JSON, while mock/fallback mode returns a safe placeholder.
+7. The backend validates JSON and generated writing before returning it to the frontend.
+8. If the provider is unavailable or generated output is invalid, the rule-based skill-gap plan, application answer, or cover letter is returned instead.
 
 Provider fallback order is practical rather than disruptive: local development starts in `mock`, configured providers such as Gemini are used only when their API keys exist, and any missing key or provider failure returns a safe fallback so the orchestrator and frontend remain usable.
 
-Current writing flow: structured analysis -> optional LLM application writer and cover letter generation -> rule-based fallback if unavailable or invalid.
+Current LLM-assisted flow: structured analysis -> match scoring -> optional LLM skill-gap advice -> optional LLM application writer and cover letter generation -> rule-based fallback if unavailable or invalid.
 
 ## Frontend-To-Backend Workflow
 

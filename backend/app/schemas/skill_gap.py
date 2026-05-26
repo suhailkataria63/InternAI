@@ -61,3 +61,6 @@ class SkillGapResponse(BaseModel):
     resume_improvement_suggestions: list[str] = Field(default_factory=list)
     recommended_projects: list[RecommendedProject] = Field(default_factory=list)
     overall_advice: str = ""
+    generation_source: Optional[str] = None
+    llm_provider: Optional[str] = None
+    used_fallback: Optional[bool] = None
