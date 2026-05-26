@@ -1,5 +1,7 @@
 import re
 
+from app.services.llm_service import LLMService
+
 
 COVER_LETTER_PROMPT_TEMPLATE = """
 You are the Cover Letter Agent for InternAI.
@@ -40,6 +42,70 @@ def generate_cover_letter(
     tone: str = "professional",
     length: str = "short",
 ) -> dict:
+    rule_based_result = generate_rule_based_cover_letter(
+        resume_profile=resume_profile,
+        job_profile=job_profile,
+        match_result=match_result,
+        skill_gap_result=skill_gap_result,
+        tone=tone,
+        length=length,
+    )
+
+    llm_service = LLMService()
+    llm_status = llm_service.get_status()
+    if llm_status.get("provider") == "mock":
+        return _with_generation_metadata(
+            rule_based_result,
+            source="rule_based",
+            provider=llm_status.get("provider", "mock"),
+            used_fallback=True,
+        )
+
+    system_prompt, user_prompt = build_cover_letter_prompt(
+        resume_profile=resume_profile,
+        job_profile=job_profile,
+        match_result=match_result,
+        skill_gap_result=skill_gap_result,
+        tone=tone,
+        cover_letter_length=length,
+    )
+    llm_result = llm_service.generate_text(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        temperature=0.3,
+        max_tokens=_llm_max_tokens_for_length(length),
+    )
+    llm_cover_letter = llm_result.get("text", "").strip()
+
+    if llm_result.get("used_fallback") or not is_valid_llm_cover_letter(
+        llm_cover_letter, length
+    ):
+        return _with_generation_metadata(
+            rule_based_result,
+            source="rule_based",
+            provider=llm_result.get("provider", llm_status.get("provider", "mock")),
+            used_fallback=True,
+        )
+
+    llm_cover_letter = clean_generated_text(llm_cover_letter)
+    return {
+        **rule_based_result,
+        "cover_letter": llm_cover_letter,
+        "word_count": count_words(llm_cover_letter),
+        "generation_source": "llm",
+        "llm_provider": llm_result.get("provider", llm_status.get("provider", "")),
+        "used_fallback": False,
+    }
+
+
+def generate_rule_based_cover_letter(
+    resume_profile: dict,
+    job_profile: dict,
+    match_result: dict,
+    skill_gap_result: dict,
+    tone: str = "professional",
+    length: str = "short",
+) -> dict:
     subject_line = build_subject_line(job_profile)
     key_points = build_key_points(resume_profile, job_profile, match_result)
     cover_letter = _build_cover_letter(
@@ -61,6 +127,113 @@ def generate_cover_letter(
         "tone": tone,
         "word_count": count_words(cover_letter),
     }
+
+
+def build_cover_letter_prompt(
+    resume_profile: dict,
+    job_profile: dict,
+    match_result: dict,
+    skill_gap_result: dict,
+    tone: str,
+    cover_letter_length: str,
+) -> tuple[str, str]:
+    candidate_name = extract_candidate_name(resume_profile)
+    role_title = _safe_role_title(job_profile.get("role_title"), "the internship role")
+    company_name = normalize_text(job_profile.get("company_name"))
+    education = extract_education(resume_profile)
+    candidate_skills = [
+        format_skill_display(skill)
+        for skill in _string_list(resume_profile.get("skills", []))
+    ][:10]
+    matched_skills = extract_top_skills(resume_profile, match_result, limit=5)
+    missing_skills = [
+        format_skill_display(skill)
+        for skill in (
+            match_result.get("missing_required_skills")
+            or match_result.get("missing_skills")
+            or []
+        )
+    ][:5]
+    projects = extract_project_highlights(resume_profile, limit=2)
+    responsibilities = [
+        normalize_text(item)
+        for item in (job_profile.get("responsibilities", []) or [])[:3]
+        if normalize_text(item)
+    ]
+
+    system_prompt = (
+        "You are an internship cover letter writing assistant. "
+        "Use only the provided structured data. Do not invent experience, companies, "
+        "certifications, achievements, metrics, or skills. Do not claim missing skills as "
+        "already mastered; mention missing skills only as active learning or improvement focus. "
+        "Keep the cover letter concise, professional, and grounded. Return only the cover letter "
+        "text with no markdown. Include a greeting and closing. Do not include fake address or "
+        "date blocks."
+    )
+    user_prompt = "\n".join(
+        [
+            f"Candidate name: {candidate_name}",
+            f"Target role: {role_title}",
+            f"Company: {company_name or 'Not provided'}",
+            f"Education: {education}",
+            f"Candidate skills: {', '.join(candidate_skills) or 'Not provided'}",
+            f"Matched skills: {', '.join(matched_skills) or 'Not provided'}",
+            f"Missing skills: {', '.join(missing_skills) or 'None listed'}",
+            f"Top projects: {' '.join(projects) or 'Not provided'}",
+            f"Job responsibilities: {'; '.join(responsibilities) or 'Not provided'}",
+            f"Tone: {normalize_text(tone) or 'professional'}",
+            f"Desired length: {normalize_text(cover_letter_length) or 'short'}",
+        ]
+    )
+    return system_prompt, user_prompt
+
+
+def is_valid_llm_cover_letter(text: str, length: str) -> bool:
+    if len(text.strip()) < 80:
+        return False
+
+    lowered = text.lower()
+    blocked_phrases = (
+        "[your name]",
+        "[company name]",
+        "[date]",
+        "[address]",
+        "dear [",
+        "sincerely,\n[",
+        "lorem ipsum",
+        "i don't have enough information",
+        "i do not have enough information",
+        "mock llm response",
+    )
+    if any(phrase in lowered for phrase in blocked_phrases):
+        return False
+
+    max_words = 360 if normalize_text(length).lower() == "medium" else 260
+    return count_words(text) <= max_words
+
+
+def _with_generation_metadata(
+    result: dict,
+    source: str,
+    provider: str,
+    used_fallback: bool,
+) -> dict:
+    return {
+        **result,
+        "generation_source": source,
+        "llm_provider": provider,
+        "used_fallback": used_fallback,
+    }
+
+
+def _llm_max_tokens_for_length(length: str) -> int:
+    return 750 if normalize_text(length).lower() == "medium" else 550
+
+
+def _string_list(value) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [normalize_text(item) for item in value if normalize_text(item)]
 
 
 def normalize_text(value) -> str:

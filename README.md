@@ -661,7 +661,10 @@ Expected response shape:
     "Education: B.S. Computer Science"
   ],
   "tone": "professional",
-  "word_count": 128
+  "word_count": 128,
+  "generation_source": "rule_based",
+  "llm_provider": "mock",
+  "used_fallback": true
 }
 ```
 
@@ -671,13 +674,17 @@ The Cover Letter Agent generates a customized internship cover letter using the 
 
 Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, optional `tone`, and optional `length`.
 
-Processing: the current implementation builds a subject line, opening summary, role-specific body, best education summary, matched skill evidence, concise project highlights, and a learning-gap sentence. It starts with `Dear Hiring Team,`, handles missing company names without awkward `at` text, uses clean role-title fallbacks, ends politely, and avoids presenting missing skills as already mastered.
+Processing: the current implementation first builds a complete rule-based cover letter with a subject line, opening summary, role-specific body, best education summary, matched skill evidence, concise project highlights, and a learning-gap sentence. When a real provider such as Gemini or Groq is configured, it can optionally ask `LLMService` for a more polished cover letter using the same grounded structured data.
+
+Fallback behavior: if `LLM_PROVIDER=mock`, the provider key is missing, the provider request fails, or the LLM letter is empty, too short, placeholder-like, or unsafe, InternAI returns the rule-based cover letter. The cover letter never exposes `Mock LLM response...` to users.
+
+Grounding rules: the LLM prompt instructs the model to use only provided resume, job, match, and skill-gap facts; avoid invented experience, companies, certifications, achievements, metrics, or skills; and mention missing skills only as active learning or improvement focus.
 
 Cover letter quality improvements: the agent avoids treating `Class X` as current education when a stronger degree exists, keeps project evidence short, uses one background paragraph, one project-relevance paragraph, and a closing section, and keeps `key_points_used` focused on education, role, company, matched skills, project names, and learning focus.
 
 The cover letter uses the same backend cleanup as application answers, so education does not end in awkward fragments such as `at background`, and project summaries avoid repeated titles, `where I Projects include...`, `I Strategic Classification System`, and similar broken phrasing.
 
-Output: `cover_letter`, `subject_line`, `opening_summary`, `key_points_used`, `tone`, and `word_count`.
+Output: `cover_letter`, `subject_line`, `opening_summary`, `key_points_used`, `tone`, and `word_count`. Backend responses may also include optional generation metadata such as `generation_source`, `llm_provider`, and `used_fallback`.
 
 Run the full multi-agent pipeline:
 

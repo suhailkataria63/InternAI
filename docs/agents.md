@@ -415,7 +415,10 @@ Output:
   "opening_summary": "",
   "key_points_used": [],
   "tone": "",
-  "word_count": 0
+  "word_count": 0,
+  "generation_source": "rule_based",
+  "llm_provider": "mock",
+  "used_fallback": true
 }
 ```
 
@@ -433,6 +436,12 @@ Supported lengths:
 
 Internal logic:
 
+- Creates the rule-based cover letter first so there is always a reliable fallback.
+- Uses `LLMService` only when a non-mock provider such as Gemini or Groq is configured.
+- Builds a grounded LLM prompt from candidate name, role, company, education, candidate skills, matched skills, missing skills, top projects, responsibilities, tone, and desired length.
+- Instructs the LLM to avoid invented experience, companies, certifications, achievements, metrics, or skills.
+- Validates LLM output and rejects placeholders, mock text, missing-information refusals, fake address/date blocks, and cover letters that are too short or too long.
+- Falls back to the rule-based cover letter whenever mock mode is active, provider keys are missing, provider requests fail, or validation fails.
 - Builds a subject line from the target role and company.
 - Starts the letter with `Dear Hiring Team,`.
 - Mentions target role, company when available, best education summary, matched skills, relevant projects, and experience when available.
@@ -451,17 +460,16 @@ Internal logic:
 
 Current limitations:
 
-- The agent is template-based and may need human editing before final submission.
+- LLM output still needs human review before final submission.
 - Medium length depends on the amount of available resume and job context.
 - Tone options are simple transformations, not full stylistic rewrites.
 - It does not yet deeply personalize for company mission or team-specific details.
 
 Future LLM upgrade:
 
-- Use an LLM to create more natural, varied cover letters.
+- Add richer company-specific personalization from trusted company context.
 - Add factual grounding checks against source profiles.
 - Generate multiple cover letter versions by tone and length.
-- Add company-specific personalization from richer job or company context.
 
 ## Multi-Agent Orchestrator
 

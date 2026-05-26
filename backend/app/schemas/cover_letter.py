@@ -19,3 +19,6 @@ class CoverLetterResponse(BaseModel):
     key_points_used: List[str]
     tone: str
     word_count: int
+    generation_source: Optional[str] = None
+    llm_provider: Optional[str] = None
+    used_fallback: Optional[bool] = None
