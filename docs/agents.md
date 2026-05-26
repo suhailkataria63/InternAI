@@ -513,6 +513,43 @@ Future LLM upgrade:
 - Persist each pipeline run and intermediate output.
 - Add retry policies and richer observability per agent step.
 
+## LLM Service Layer
+
+Purpose: Provide a clean backend boundary for future LLM-powered agents without replacing the current deterministic pipeline.
+
+Current endpoints:
+
+```json
+{
+  "GET /api/llm/status": "Returns provider, model, configured, and available.",
+  "POST /api/llm/test": "Runs a simple generation request through the configured provider."
+}
+```
+
+Internal logic:
+
+- Reads optional LLM settings from backend configuration.
+- Defaults to `LLM_PROVIDER=mock` and `LLM_MODEL=mock-model`.
+- Starts successfully when Groq, Gemini, or OpenAI API keys are missing.
+- Returns a clear mock fallback response when no provider is configured.
+- Supports Gemini through the REST `generateContent` endpoint when `LLM_PROVIDER=gemini` and `GEMINI_API_KEY` are set.
+- Includes a Groq-ready OpenAI-compatible HTTP path that is only used when `LLM_PROVIDER=groq` and `GROQ_API_KEY` are available.
+- Falls back safely if a provider request fails.
+- Exposes `LLMService.generate_text(system_prompt, user_prompt, temperature, max_tokens)` so future agents can call one stable interface.
+
+Current limitations:
+
+- Existing Resume, JD, Match, Skill Gap, Application Writer, Cover Letter, and Orchestrator agents remain rule-based/template-based.
+- OpenAI-compatible direct calls are configuration-ready but not implemented yet.
+- The test endpoint is for provider verification, not production writing quality.
+
+Future LLM upgrade:
+
+- Let selected agents use `LLMService` for richer extraction and generation.
+- Add provider-specific response metadata and error logging.
+- Add structured JSON generation helpers with validation and rule-based fallback.
+- Add LangGraph orchestration while preserving deterministic fallback paths.
+
 ## Profile Agent
 
 Purpose: Understand the user's academic background, skills, projects, interests, target roles, location preferences, and availability.

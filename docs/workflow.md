@@ -36,6 +36,8 @@ The current application supports the first analysis chain: resume text input, jo
 8. `POST /api/orchestrator/analyze-application` runs the full analysis pipeline in one request.
 9. `POST /api/tracker/applications` saves a full application analysis.
 10. `GET /api/tracker/applications` lists saved applications.
+11. `GET /api/llm/status` checks the configured LLM provider layer.
+12. `POST /api/llm/test` tests mock or configured provider generation.
 
 ## Orchestrator Workflow
 
@@ -68,6 +70,28 @@ Final writing output is generated from the cleaned `resume_profile`, structured 
 Before the orchestrator response is returned to the frontend, backend agents polish display-facing fields: JD company and eligibility fields are cleaned, skill names use canonical casing in skill gaps and summaries, and generated writing uses compact education and project evidence.
 
 Generated application answers and cover letters also run project-summary cleanup before display. Repeated project titles, candidate bio text, `Projects include...` prefixes, and third-person fragments are removed or replaced with concise fallback summaries.
+
+## Future LLM Workflow
+
+InternAI now has an LLM service boundary, but the main pipeline remains rule-based and template-based by default.
+
+| Stage | Current Behavior | Future LLM Use |
+| --- | --- | --- |
+| Resume parsing | Rule-based section and keyword extraction | LLM can enrich structured profile fields with validation |
+| JD parsing | Rule-based role, company, skill, and requirement extraction | LLM can improve messy job descriptions |
+| Match scoring | Deterministic weighted scoring | LLM can add semantic project relevance notes |
+| Skill gap planning | Rule-based priorities and roadmap | LLM can personalize learning tasks |
+| Application writing | Template-based grounded writing | LLM can generate more natural drafts |
+| Cover letter writing | Template-based grounded writing | LLM can create richer company-specific letters |
+
+Future agent flow:
+
+1. Rule-based agents create structured resume and job profiles.
+2. A future agent calls `LLMService.generate_text(...)` with grounded system and user prompts.
+3. The configured provider, such as Gemini or Groq, returns generated text, or mock/fallback mode returns a safe placeholder.
+4. The backend validates or cleans the generated output before returning it to the frontend.
+
+Provider fallback order is practical rather than disruptive: local development starts in `mock`, configured providers such as Gemini are used only when their API keys exist, and any missing key or provider failure returns a safe fallback so the orchestrator and frontend remain usable.
 
 ## Frontend-To-Backend Workflow
 

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic import Field
@@ -12,6 +13,13 @@ class Settings(BaseSettings):
     project_name: str = "InternAI"
     environment: str = Field(default="development", alias="ENVIRONMENT")
     database_url: str = Field(default="sqlite:///./internai.db", alias="DATABASE_URL")
+    llm_provider: str = Field(default="mock", alias="LLM_PROVIDER")
+    llm_model: str = Field(default="mock-model", alias="LLM_MODEL")
+    groq_api_key: Optional[str] = Field(default=None, alias="GROQ_API_KEY")
+    gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
+    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
+    llm_temperature: float = Field(default=0.3, alias="LLM_TEMPERATURE")
+    llm_max_tokens: int = Field(default=600, alias="LLM_MAX_TOKENS")
     cors_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",

@@ -25,6 +25,7 @@ InternAI will provide a guided assistant that organizes the internship process i
 - Application Writer Agent that drafts customized internship application answers without requiring an external LLM API key.
 - Cover Letter Agent that generates customized internship cover letters without requiring an external LLM API key.
 - Multi-Agent Orchestrator endpoint that runs the complete resume-to-application pipeline in one request.
+- LLM service layer preparation with default mock mode and Groq-ready configuration for future AI upgrades.
 - Next.js frontend UI for running the full orchestrator workflow from a browser.
 - SQLite-backed Application Tracker for saving analyzed internships and tracking status.
 
@@ -33,7 +34,7 @@ InternAI will provide a guided assistant that organizes the internship process i
 - Backend: FastAPI
 - Frontend: Next.js with Tailwind CSS
 - Database: SQLite during initial development
-- AI workflow: LangChain or LangGraph, to be added later
+- AI workflow: rule-based agents today, with an LLM provider layer prepared for future Groq, Gemini, OpenAI-compatible, LangChain, or LangGraph integration
 - Documentation: Markdown files in `docs/`
 
 ## Planned Multi-Agent Architecture
@@ -99,10 +100,70 @@ uvicorn app.main:app --reload
 
 The backend should be available at `http://127.0.0.1:8000`.
 
+LLM configuration is optional. By default, the backend runs in mock mode and does not require any real API key:
+
+```env
+LLM_PROVIDER=mock
+LLM_MODEL=mock-model
+GROQ_API_KEY=
+GEMINI_API_KEY=
+OPENAI_API_KEY=
+LLM_TEMPERATURE=0.3
+LLM_MAX_TOKENS=600
+```
+
+To prepare Groq later, set `LLM_PROVIDER=groq`, choose a Groq model in `LLM_MODEL`, and add `GROQ_API_KEY`. If the key is missing or the provider request fails, InternAI returns a mock fallback response instead of crashing.
+
+To use Gemini's free-tier-friendly API later, update `.env` like this:
+
+```env
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-1.5-flash
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+If `LLM_PROVIDER=gemini` is set but `GEMINI_API_KEY` is empty, the backend still starts and `POST /api/llm/test` returns a safe fallback response.
+
 Check the health endpoint:
 
 ```bash
 curl http://127.0.0.1:8000/health
+```
+
+Check the LLM provider layer:
+
+```bash
+curl http://127.0.0.1:8000/api/llm/status
+```
+
+Expected default response:
+
+```json
+{
+  "provider": "mock",
+  "model": "mock-model",
+  "configured": true,
+  "available": true
+}
+```
+
+Test mock generation:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/llm/test \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Write one sentence about InternAI."}'
+```
+
+Expected response shape:
+
+```json
+{
+  "provider": "mock",
+  "model": "mock-model",
+  "text": "Mock LLM response: provider is not configured yet.",
+  "used_fallback": true
+}
 ```
 
 Expected response:
@@ -670,6 +731,17 @@ Agent communication flow:
 This endpoint works without any external LLM API key and reuses the existing rule-based and template-based agents.
 
 The final writing agents use cleaned profile data from earlier phases: best education selection, concise project summaries, matched skill highlighting, and learning-gap framing produce more natural answers and cover letters while staying grounded in the extracted resume and job profile.
+
+## LLM Service Layer
+
+InternAI now includes a backend LLM provider layer for future real-model integration. The current agents still use deterministic rule-based and template-based logic, so existing endpoints work without API keys.
+
+The service exposes:
+
+- `GET /api/llm/status` to show the active provider, model, and availability.
+- `POST /api/llm/test` to test text generation through the configured provider.
+
+Default behavior is `mock`, which returns a safe fallback response. Gemini support is available through the REST `generateContent` API and only runs when `LLM_PROVIDER=gemini` and `GEMINI_API_KEY` are set. Groq support is prepared through an OpenAI-compatible HTTP path and only runs when `LLM_PROVIDER=groq` and `GROQ_API_KEY` are set. Future phases can call `LLMService.generate_text(...)` from agents without changing frontend API contracts.
 
 ### Frontend
 

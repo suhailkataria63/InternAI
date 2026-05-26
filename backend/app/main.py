@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.application_writer import router as application_writer_router
 from app.api.cover_letter import router as cover_letter_router
 from app.api.jobs import router as jobs_router
+from app.api.llm import router as llm_router
 from app.api.match import router as match_router
 from app.api.orchestrator import router as orchestrator_router
 from app.api.resume import router as resume_router
@@ -39,6 +40,7 @@ app.include_router(application_writer_router)
 app.include_router(cover_letter_router)
 app.include_router(orchestrator_router)
 app.include_router(tracker_router)
+app.include_router(llm_router)
 
 
 @app.get("/health", tags=["System"])
