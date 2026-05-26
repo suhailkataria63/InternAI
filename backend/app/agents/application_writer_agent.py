@@ -1,5 +1,7 @@
 import re
 
+from app.services.llm_service import LLMService
+
 
 APPLICATION_WRITER_PROMPT_TEMPLATE = """
 You are the Application Writer Agent for InternAI.
@@ -41,6 +43,71 @@ def generate_application_answer(
     tone: str = "professional",
     word_limit: int = 180,
 ) -> dict:
+    rule_based_result = generate_rule_based_answer(
+        resume_profile=resume_profile,
+        job_profile=job_profile,
+        match_result=match_result,
+        skill_gap_result=skill_gap_result,
+        application_question=application_question,
+        tone=tone,
+        word_limit=word_limit,
+    )
+
+    llm_service = LLMService()
+    llm_status = llm_service.get_status()
+    if llm_status.get("provider") == "mock":
+        return _with_generation_metadata(
+            rule_based_result,
+            source="rule_based",
+            provider=llm_status.get("provider", "mock"),
+            used_fallback=True,
+        )
+
+    system_prompt, user_prompt = build_application_answer_prompt(
+        resume_profile=resume_profile,
+        job_profile=job_profile,
+        match_result=match_result,
+        skill_gap_result=skill_gap_result,
+        question=application_question,
+        tone=tone,
+        word_limit=word_limit,
+    )
+    llm_result = llm_service.generate_text(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        temperature=0.3,
+        max_tokens=max(250, min(900, int(word_limit * 2.2))),
+    )
+    llm_answer = normalize_text(llm_result.get("text"))
+
+    if llm_result.get("used_fallback") or not is_valid_llm_answer(llm_answer, word_limit):
+        return _with_generation_metadata(
+            rule_based_result,
+            source="rule_based",
+            provider=llm_result.get("provider", llm_status.get("provider", "mock")),
+            used_fallback=True,
+        )
+
+    llm_answer = clean_generated_text(llm_answer)
+    return {
+        **rule_based_result,
+        "generated_answer": llm_answer,
+        "word_count": count_words(llm_answer),
+        "generation_source": "llm",
+        "llm_provider": llm_result.get("provider", llm_status.get("provider", "")),
+        "used_fallback": False,
+    }
+
+
+def generate_rule_based_answer(
+    resume_profile: dict,
+    job_profile: dict,
+    match_result: dict,
+    skill_gap_result: dict,
+    application_question: str,
+    tone: str = "professional",
+    word_limit: int = 180,
+) -> dict:
     question_type = detect_question_type(application_question)
     key_points = build_key_points(resume_profile, job_profile, match_result, skill_gap_result)
     answer = _build_answer_by_type(
@@ -61,6 +128,101 @@ def generate_application_answer(
         "tone": tone,
         "word_count": count_words(answer),
         "improvement_note": _build_improvement_note(match_result, skill_gap_result),
+    }
+
+
+def build_application_answer_prompt(
+    resume_profile: dict,
+    job_profile: dict,
+    match_result: dict,
+    skill_gap_result: dict,
+    question: str,
+    tone: str,
+    word_limit: int,
+) -> tuple[str, str]:
+    role_title = _safe_role_title(job_profile.get("role_title"), "this internship")
+    company_name = normalize_text(job_profile.get("company_name"))
+    education = summarize_education(resume_profile.get("education", []))
+    candidate_skills = [
+        format_skill_display(skill)
+        for skill in get_string_list(resume_profile.get("skills", []))
+    ][:10]
+    matched_skills = extract_top_skills(resume_profile, match_result, limit=5)
+    missing_skills = [
+        format_skill_display(skill)
+        for skill in (
+            match_result.get("missing_required_skills")
+            or match_result.get("missing_skills")
+            or []
+        )
+    ][:5]
+    projects = extract_project_highlights(resume_profile, limit=2)
+    learning_focus = _learning_focus(match_result, skill_gap_result)[:3]
+
+    system_prompt = (
+        "You are an internship application writing assistant. "
+        "Use only the provided structured data. Do not invent experience, companies, "
+        "certifications, metrics, or skills. Do not claim missing skills as already mastered. "
+        "Mention missing skills only as learning or improvement focus. Keep the answer concise, "
+        "first-person, factual, and suitable for an internship application. Return only the answer "
+        "text with no markdown, no headings, and no bullet points."
+    )
+    user_prompt = "\n".join(
+        [
+            f"Question: {normalize_text(question)}",
+            f"Target role: {role_title}",
+            f"Company: {company_name or 'Not provided'}",
+            f"Candidate education: {education}",
+            f"Candidate skills: {', '.join(candidate_skills) or 'Not provided'}",
+            f"Matched skills: {', '.join(matched_skills) or 'Not provided'}",
+            f"Missing skills: {', '.join(missing_skills) or 'None listed'}",
+            f"Top projects: {' '.join(projects) or 'Not provided'}",
+            f"Recommended learning focus: {', '.join(learning_focus) or 'Keep learning and contributing carefully'}",
+            f"Tone: {normalize_text(tone) or 'professional'}",
+            f"Word limit: {word_limit}",
+        ]
+    )
+    return system_prompt, user_prompt
+
+
+def is_valid_llm_answer(answer: str, word_limit: int) -> bool:
+    if len(answer) < 30:
+        return False
+    lowered = answer.lower()
+    blocked_phrases = (
+        "[your name]",
+        "lorem ipsum",
+        "i don't have enough information",
+        "i do not have enough information",
+        "mock llm response",
+    )
+    if any(phrase in lowered for phrase in blocked_phrases):
+        return False
+
+    if word_limit > 0:
+        allowed_words = max(word_limit + 30, int(word_limit * 1.25))
+        if count_words(answer) > allowed_words:
+            return False
+    return True
+
+
+def get_string_list(value) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [normalize_text(item) for item in value if normalize_text(item)]
+
+
+def _with_generation_metadata(
+    result: dict,
+    source: str,
+    provider: str,
+    used_fallback: bool,
+) -> dict:
+    return {
+        **result,
+        "generation_source": source,
+        "llm_provider": provider,
+        "used_fallback": used_fallback,
     }
 
 

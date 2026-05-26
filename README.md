@@ -599,13 +599,17 @@ The Application Writer Agent creates customized internship application answers u
 
 Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, `application_question`, optional `tone`, and optional `word_limit`.
 
-Processing: the current implementation detects the question type, selects a template, chooses the strongest education entry instead of blindly using the shortest item, inserts a clean target role, highlights top matched skills, summarizes the top two projects, and frames missing skills as active learning goals. It avoids suspicious role titles, handles missing company names gracefully, avoids claiming missing skills as already mastered, and trims to the requested word limit.
+Processing: the current implementation first creates a complete rule-based answer, then optionally asks `LLMService` for a more natural draft when a real provider such as Gemini or Groq is configured. The LLM prompt is grounded with resume profile, job profile, match result, skill gaps, target role, company, education, matched skills, missing skills, projects, tone, and word limit.
+
+Fallback behavior: if `LLM_PROVIDER=mock`, the provider key is missing, the provider request fails, or the LLM answer is too short, too long, empty, or placeholder-like, InternAI returns the rule-based answer. The application answer never exposes `Mock LLM response...` to users.
+
+Grounding rules: the LLM prompt instructs the model to use only provided structured data, avoid invented experience or skills, avoid fake company/certification claims, and mention missing skills only as learning or improvement focus.
 
 Writing quality improvements: the agent prefers higher education such as `B.Tech`, `Bachelor`, engineering, AI, data science, or computer science over `Class X`; converts long project objects into concise evidence such as `Hybrid Phishing Detection System`; keeps `key_points_used` short; and limits learning focus to the most important missing skills.
 
 The writer also removes noisy phrases such as `Projects include...`, repeated project titles, third-person fragments such as `where he worked`, and broken project fragments before using cleaner sentences such as `In my Hybrid Phishing Detection System project, I built...`. When a project description is still messy, it falls back to a safe project-specific summary.
 
-Output: the original question, generated answer, key points used, tone, word count, and an improvement note.
+Output: the original question, generated answer, key points used, tone, word count, and an improvement note. Backend responses may also include optional generation metadata such as `generation_source`, `llm_provider`, and `used_fallback`.
 
 Generate a customized cover letter:
 

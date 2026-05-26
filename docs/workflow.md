@@ -81,15 +81,18 @@ InternAI now has an LLM service boundary, but the main pipeline remains rule-bas
 | JD parsing | Rule-based role, company, skill, and requirement extraction | LLM can improve messy job descriptions |
 | Match scoring | Deterministic weighted scoring | LLM can add semantic project relevance notes |
 | Skill gap planning | Rule-based priorities and roadmap | LLM can personalize learning tasks |
-| Application writing | Template-based grounded writing | LLM can generate more natural drafts |
+| Application writing | Rule-based fallback plus optional LLM generation | LLM can generate more natural grounded drafts |
 | Cover letter writing | Template-based grounded writing | LLM can create richer company-specific letters |
 
-Future agent flow:
+Current and future agent flow:
 
 1. Rule-based agents create structured resume and job profiles.
-2. A future agent calls `LLMService.generate_text(...)` with grounded system and user prompts.
-3. The configured provider, such as Gemini or Groq, returns generated text, or mock/fallback mode returns a safe placeholder.
-4. The backend validates or cleans the generated output before returning it to the frontend.
+2. Match and skill-gap agents add structured evidence, missing skills, and learning focus.
+3. Application Writer creates a rule-based answer first.
+4. When a real provider is configured, Application Writer calls `LLMService.generate_text(...)` with grounded system and user prompts.
+5. The configured provider, such as Gemini or Groq, returns generated text, or mock/fallback mode returns a safe placeholder.
+6. The backend validates and cleans the generated output before returning it to the frontend.
+7. If the provider is unavailable or the generated answer is invalid, the rule-based answer is returned instead.
 
 Provider fallback order is practical rather than disruptive: local development starts in `mock`, configured providers such as Gemini are used only when their API keys exist, and any missing key or provider failure returns a safe fallback so the orchestrator and frontend remain usable.
 

@@ -326,7 +326,10 @@ Output:
   "key_points_used": [],
   "tone": "",
   "word_count": 0,
-  "improvement_note": ""
+  "improvement_note": "",
+  "generation_source": "llm or rule_based",
+  "llm_provider": "mock, gemini, groq, or other configured provider",
+  "used_fallback": true
 }
 ```
 
@@ -347,6 +350,12 @@ Tone options:
 
 Internal logic:
 
+- Builds a complete rule-based answer first so there is always a safe fallback.
+- Uses `LLMService.generate_text(...)` only when the configured provider is not `mock`.
+- Builds a grounded LLM prompt with the application question, target role, company, education, candidate skills, matched skills, missing skills, top projects, recommended learning focus, tone, and word limit.
+- Instructs the LLM to use only provided structured data, avoid invented experience, companies, certifications, metrics, or skills, and mention missing skills only as learning focus.
+- Rejects LLM answers that are empty, too short, too long beyond the word limit, or contain obvious placeholders such as `[Your Name]`, `Lorem ipsum`, or `I don't have enough information`.
+- Falls back to the rule-based answer if the provider returns a fallback response, fails, or produces invalid text.
 - Detects the application question type from simple keyword patterns.
 - Selects the best education entry, preferring `B.Tech`, `BTech`, `Bachelor`, `B.E`, engineering, AI, data science, computer science, degree, and currently pursuing signals over `Diploma` or `Class X`.
 - Extracts a clean target role, matched skills, relevant projects, and learning focus.
@@ -367,14 +376,15 @@ Internal logic:
 
 Current limitations:
 
-- The agent is template-based and may sound repetitive across many applications.
+- In mock mode, the agent intentionally uses the rule-based answer instead of returning mock provider text.
+- The rule-based fallback may sound repetitive across many applications.
 - Tone control is intentionally simple.
 - Company-specific personalization depends on the details included in `job_profile`.
 - It does not yet rewrite the answer based on recruiter feedback.
 
 Future LLM upgrade:
 
-- Use an LLM to generate more natural and varied application answers.
+- Expand LLM answer generation with structured JSON mode and stronger validation.
 - Add stricter factual grounding checks.
 - Support multiple answer drafts for the same question.
 - Generate cover letters and short recruiter messages from the same context.

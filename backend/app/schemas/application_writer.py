@@ -20,3 +20,6 @@ class ApplicationWriterResponse(BaseModel):
     tone: str
     word_count: int
     improvement_note: str
+    generation_source: Optional[str] = None
+    llm_provider: Optional[str] = None
+    used_fallback: Optional[bool] = None
