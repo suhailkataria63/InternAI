@@ -14,23 +14,23 @@ export default function PipelineSummaryCard({ summary }: PipelineSummaryCardProp
   ];
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+    <section className="premium-card rounded-[1.75rem] p-5">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
             Pipeline Summary
           </p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-950">
+          <h3 className="mt-1 text-lg font-black text-slate-950">
             Internship match report
           </h3>
         </div>
-        <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+        <span className="rounded-full bg-slate-950 shadow-sm px-3 py-1 text-xs font-semibold text-white">
           {summary.match_level || "Pending"}
         </span>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {facts.map(([label, value]) => (
-          <div key={label} className="rounded-xl bg-slate-50 p-3">
+          <div key={label} className="rounded-2xl bg-slate-50/90 p-3">
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
               {label}
             </p>
@@ -38,8 +38,8 @@ export default function PipelineSummaryCard({ summary }: PipelineSummaryCardProp
           </div>
         ))}
       </div>
-      <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+      <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
           Recommended next step
         </p>
         <p className="mt-1 text-sm leading-6 text-emerald-950">

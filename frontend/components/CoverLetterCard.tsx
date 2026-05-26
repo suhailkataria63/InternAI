@@ -22,13 +22,13 @@ export default function CoverLetterCard({ coverLetter }: CoverLetterCardProps) {
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+    <section className="premium-card rounded-[1.75rem] p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
             Cover Letter
           </p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-950">
+          <h3 className="mt-1 text-lg font-black text-slate-950">
             {coverLetter.subject_line || "Subject line will appear here"}
           </h3>
         </div>
@@ -43,7 +43,7 @@ export default function CoverLetterCard({ coverLetter }: CoverLetterCardProps) {
             type="button"
             onClick={copyCoverLetter}
             disabled={!letter}
-            className="rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
             {copyStatus === "copied" ? "Copied!" : "Copy cover letter"}
           </button>
@@ -62,7 +62,7 @@ export default function CoverLetterCard({ coverLetter }: CoverLetterCardProps) {
         </p>
       ) : null}
 
-      <p className="mt-4 whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-800">
+      <p className="mt-4 whitespace-pre-wrap rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 text-sm leading-6 text-slate-800">
         {letter || "No cover letter generated yet."}
       </p>
 

@@ -1,5 +1,5 @@
 export type Tone = "professional" | "confident" | "friendly" | "concise";
-export type CoverLetterLength = "short" | "medium";
+export type CoverLetterLength = "short" | "medium" | "long";
 
 export type AnalysisRequest = {
   resume_text: string;

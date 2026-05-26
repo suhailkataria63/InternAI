@@ -33,18 +33,18 @@ function ScoreBreakdown({ match }: { match: MatchResult }) {
   const breakdown = match.score_breakdown || {};
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <section className="premium-card rounded-[1.75rem] p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
         Score Breakdown
       </p>
-      <h3 className="mt-1 text-lg font-semibold text-slate-950">
+      <h3 className="mt-1 text-lg font-black text-slate-950">
         Where the score came from
       </h3>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {breakdownLabels.map(([key, label]) => {
           const value = breakdown[key];
           return (
-            <div key={key} className="rounded-xl bg-slate-50 p-3">
+            <div key={key} className="rounded-2xl bg-slate-50/90 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 {label}
               </p>
@@ -58,12 +58,12 @@ function ScoreBreakdown({ match }: { match: MatchResult }) {
       {(breakdown.education_note || breakdown.experience_note) ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {typeof breakdown.education_note === "string" ? (
-            <p className="rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+            <p className="rounded-2xl bg-slate-50/90 p-3 text-sm leading-6 text-slate-700">
               {breakdown.education_note}
             </p>
           ) : null}
           {typeof breakdown.experience_note === "string" ? (
-            <p className="rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+            <p className="rounded-2xl bg-slate-50/90 p-3 text-sm leading-6 text-slate-700">
               {breakdown.experience_note}
             </p>
           ) : null}
@@ -77,8 +77,8 @@ function SkillGroup({ title, skills, tone }: SkillGroupProps) {
   const list = skills || [];
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
         {title}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -94,11 +94,11 @@ function SkillGroup({ title, skills, tone }: SkillGroupProps) {
 
 function SkillsOverview({ match }: { match: MatchResult }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <section className="premium-card rounded-[1.75rem] p-5">
+      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
         Skills Overview
       </p>
-      <h3 className="mt-1 text-lg font-semibold text-slate-950">
+      <h3 className="mt-1 text-lg font-black text-slate-950">
         Matched and missing skills
       </h3>
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -129,7 +129,7 @@ export default function ResultsDashboard({ result, onSaved }: ResultsDashboardPr
   if (!result) {
     return (
       <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-soft">
-        <h2 className="text-lg font-semibold text-slate-950">Results Dashboard</h2>
+        <h2 className="text-lg font-black text-slate-950">Results Dashboard</h2>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
           Run an analysis to see your internship match report.
         </p>
@@ -176,13 +176,13 @@ export default function ResultsDashboard({ result, onSaved }: ResultsDashboardPr
       <ApplicationAnswerCard answer={result.application_answer || {}} />
       <CoverLetterCard coverLetter={result.cover_letter || {}} />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+      <section className="premium-card rounded-[1.75rem] p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
               Tracker
             </p>
-            <h3 className="mt-1 text-lg font-semibold text-slate-950">
+            <h3 className="mt-1 text-lg font-black text-slate-950">
               Save this application
             </h3>
             <p className="mt-1 text-sm text-slate-600">
@@ -199,12 +199,12 @@ export default function ResultsDashboard({ result, onSaved }: ResultsDashboardPr
           </button>
         </div>
         {saveMessage ? (
-          <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <p className="mt-3 rounded-2xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
             {saveMessage}
           </p>
         ) : null}
         {saveError ? (
-          <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mt-3 rounded-2xl bg-red-50 px-3 py-2 text-sm text-red-700">
             Failed to save application: {saveError}
           </p>
         ) : null}

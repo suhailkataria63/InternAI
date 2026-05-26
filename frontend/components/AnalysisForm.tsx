@@ -46,6 +46,21 @@ type AnalysisFormProps = {
   onResult: (result: AnalysisResponse) => void;
 };
 
+function FieldLabel({
+  title,
+  helper,
+}: {
+  title: string;
+  helper?: string;
+}) {
+  return (
+    <span className="block">
+      <span className="block text-sm font-black text-slate-900">{title}</span>
+      {helper ? <span className="mt-1 block text-xs leading-5 text-slate-500">{helper}</span> : null}
+    </span>
+  );
+}
+
 export default function AnalysisForm({ onResult }: AnalysisFormProps) {
   const [form, setForm] = useState<AnalysisRequest>(defaultForm);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,14 +97,13 @@ export default function AnalysisForm({ onResult }: AnalysisFormProps) {
     setUploadMessage("");
     setUploadError("");
 
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     const isPdf =
       file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
     if (!isPdf) {
-      setUploadError("Failed to extract resume text. Please paste resume text manually.");
+      setUploadError("Please upload a PDF resume or paste the resume text manually.");
       event.target.value = "";
       return;
     }
@@ -98,6 +112,7 @@ export default function AnalysisForm({ onResult }: AnalysisFormProps) {
     try {
       const uploaded = await uploadResumePdf(file);
       const extractedText = uploaded.extracted_text || "";
+
       if (!extractedText.trim()) {
         setUploadError("PDF uploaded, but no text could be extracted.");
         return;
@@ -105,13 +120,14 @@ export default function AnalysisForm({ onResult }: AnalysisFormProps) {
 
       updateField("resume_text", extractedText);
       setUploadMessage(
-        `Uploaded ${uploaded.filename || file.name} successfully. Extracted ${uploaded.text_length ?? extractedText.length} characters.`,
+        `Uploaded ${uploaded.filename || file.name}. Extracted ${uploaded.text_length ?? extractedText.length} characters.`,
       );
     } catch (caughtError) {
       const message =
         caughtError instanceof Error
           ? caughtError.message
           : "Failed to extract resume text. Please paste resume text manually.";
+
       setUploadError(
         message.includes("Could not reach")
           ? message
@@ -143,168 +159,174 @@ export default function AnalysisForm({ onResult }: AnalysisFormProps) {
   };
 
   return (
-    <form
-      onSubmit={submit}
-      className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <form onSubmit={submit} className="premium-card reveal rounded-[2rem] p-5 sm:p-6">
+      <div className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">
-            Run Full Analysis
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
+            Analysis input
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">
+            Run full application analysis
           </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Paste a resume and job description to run the orchestrator pipeline.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Upload a resume or paste text, add a job description, then generate a complete match report and application assets.
           </p>
         </div>
         <button
           type="button"
           onClick={useSampleData}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
+          className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-700"
         >
-          Use Sample Data
+          Use sample data
         </button>
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
             <label className="block">
-              <span className="text-sm font-medium text-slate-800">
-                Upload resume PDF
-              </span>
-              <span className="mt-1 block text-sm text-slate-600">
-                Upload a PDF to automatically extract resume text.
-              </span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">
-                PDF text extraction may not preserve exact visual order, but the
-                analyzer will still use the extracted content.
-              </span>
+              <FieldLabel
+                title="Upload resume PDF"
+                helper="PDF extraction is fastest. You can still edit the extracted text before analysis."
+              />
               <input
                 type="file"
                 accept=".pdf,application/pdf"
                 onChange={handleResumeUpload}
                 disabled={isUploadingResume}
-                className="mt-3 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-950 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
+                className="mt-4 block w-full rounded-xl border border-blue-100 bg-white px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-950 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white hover:file:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
               />
             </label>
+
             {isUploadingResume ? (
-              <p className="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
+              <p className="mt-3 rounded-xl bg-white px-3 py-2 text-sm font-medium text-slate-700">
                 Extracting resume text...
               </p>
             ) : null}
             {uploadMessage ? (
-              <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
                 {uploadMessage}
               </p>
             ) : null}
             {uploadError ? (
-              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
                 {uploadError}
               </p>
             ) : null}
           </div>
 
           <label className="block">
-            <span className="text-sm font-medium text-slate-800">Resume text</span>
-            <textarea
-              value={form.resume_text}
-              onChange={(event) => updateField("resume_text", event.target.value)}
-              className="mt-2 h-72 w-full resize-y rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm leading-6 outline-none transition focus:border-slate-500 focus:bg-white focus:ring-4 focus:ring-slate-100"
-              placeholder="Paste extracted resume text here, or upload a PDF above..."
-            />
+            <FieldLabel title="Resume text" helper="Keep education, skills, projects, and experience sections intact." />
+            <div className="field-shell mt-2 rounded-2xl">
+              <textarea
+                value={form.resume_text}
+                onChange={(event) => updateField("resume_text", event.target.value)}
+                className="h-72 w-full resize-y rounded-2xl bg-transparent p-4 text-sm leading-6 text-slate-800 outline-none placeholder:text-slate-400"
+                placeholder="Paste extracted resume text here, or upload a PDF above..."
+              />
+            </div>
           </label>
         </div>
 
         <label className="block">
-          <span className="text-sm font-medium text-slate-800">
-            Job description
-          </span>
-          <textarea
-            value={form.job_description}
-            onChange={(event) =>
-              updateField("job_description", event.target.value)
-            }
-            className="mt-2 h-72 w-full resize-y rounded-xl border border-slate-300 bg-slate-50 p-3 text-sm leading-6 outline-none transition focus:border-slate-500 focus:bg-white focus:ring-4 focus:ring-slate-100"
-            placeholder="Paste internship or job description here..."
-          />
+          <FieldLabel title="Job description" helper="Paste the full role description, requirements, company, and location if available." />
+          <div className="field-shell mt-2 rounded-2xl">
+            <textarea
+              value={form.job_description}
+              onChange={(event) =>
+                updateField("job_description", event.target.value)
+              }
+              className="h-[27.5rem] w-full resize-y rounded-2xl bg-transparent p-4 text-sm leading-6 text-slate-800 outline-none placeholder:text-slate-400"
+              placeholder="Paste internship or job description here..."
+            />
+          </div>
         </label>
       </div>
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <label className="block md:col-span-2">
-          <span className="text-sm font-medium text-slate-800">
-            Application question
-          </span>
-          <input
-            value={form.application_question}
-            onChange={(event) =>
-              updateField("application_question", event.target.value)
-            }
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-500 focus:bg-white focus:ring-4 focus:ring-slate-100"
-          />
+          <FieldLabel title="Application question" />
+          <div className="field-shell mt-2 rounded-2xl">
+            <input
+              value={form.application_question}
+              onChange={(event) =>
+                updateField("application_question", event.target.value)
+              }
+              className="w-full rounded-2xl bg-transparent px-4 py-3 text-sm text-slate-800 outline-none"
+            />
+          </div>
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-slate-800">Tone</span>
-          <select
-            value={form.tone}
-            onChange={(event) => updateField("tone", event.target.value as Tone)}
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-500 focus:bg-white focus:ring-4 focus:ring-slate-100"
-          >
-            <option value="professional">professional</option>
-            <option value="confident">confident</option>
-            <option value="friendly">friendly</option>
-            <option value="concise">concise</option>
-          </select>
+          <FieldLabel title="Tone" />
+          <div className="field-shell mt-2 rounded-2xl">
+            <select
+              value={form.tone}
+              onChange={(event) => updateField("tone", event.target.value as Tone)}
+              className="w-full rounded-2xl bg-transparent px-4 py-3 text-sm text-slate-800 outline-none"
+            >
+              <option value="professional">professional</option>
+              <option value="confident">confident</option>
+              <option value="friendly">friendly</option>
+              <option value="concise">concise</option>
+            </select>
+          </div>
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-slate-800">Word limit</span>
-          <input
-            type="number"
-            min={40}
-            max={500}
-            value={form.word_limit}
-            onChange={(event) =>
-              updateField("word_limit", Number(event.target.value))
-            }
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-500 focus:bg-white focus:ring-4 focus:ring-slate-100"
-          />
+          <FieldLabel title="Word limit" />
+          <div className="field-shell mt-2 rounded-2xl">
+            <input
+              type="number"
+              min={40}
+              max={500}
+              value={form.word_limit}
+              onChange={(event) =>
+                updateField("word_limit", Number(event.target.value))
+              }
+              className="w-full rounded-2xl bg-transparent px-4 py-3 text-sm text-slate-800 outline-none"
+            />
+          </div>
         </label>
 
-        <label className="block">
-          <span className="text-sm font-medium text-slate-800">
-            Cover letter length
-          </span>
-          <select
-            value={form.cover_letter_length}
-            onChange={(event) =>
-              updateField(
-                "cover_letter_length",
-                event.target.value as CoverLetterLength,
-              )
-            }
-            className="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-slate-500 focus:bg-white focus:ring-4 focus:ring-slate-100"
-          >
-            <option value="short">short</option>
-            <option value="medium">medium</option>
-          </select>
+        <label className="block md:col-span-2 xl:col-span-1">
+          <FieldLabel title="Cover letter length" />
+          <div className="field-shell mt-2 rounded-2xl">
+            <select
+              value={form.cover_letter_length}
+              onChange={(event) =>
+                updateField(
+                  "cover_letter_length",
+                  event.target.value as CoverLetterLength,
+                )
+              }
+              className="w-full rounded-2xl bg-transparent px-4 py-3 text-sm text-slate-800 outline-none"
+            >
+              <option value="short">short</option>
+              <option value="medium">medium</option>
+            </select>
+          </div>
         </label>
       </div>
 
       {error ? (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="mt-5 w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
-      >
-        {isLoading ? "Analyzing..." : "Analyze"}
-      </button>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs leading-5 text-slate-500">
+          Your backend handles the analysis. This frontend keeps the workflow clear, accessible, and responsive.
+        </p>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="inline-flex min-w-40 items-center justify-center rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-glow transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none"
+        >
+          {isLoading ? "Analyzing..." : "Analyze now"}
+        </button>
+      </div>
     </form>
   );
 }

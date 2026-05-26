@@ -97,27 +97,30 @@ Provider fallback order is practical rather than disruptive: local development s
 
 The Next.js frontend uses the orchestrator endpoint as its main API.
 
+The demo flow is now organized as a production-style single command-center workspace: resume upload, editable resume text, job description input, dynamic analysis dashboard, wide roadmap section, generated writing panels, save controls, and application tracker.
+
 | UI Step | Frontend Module | Backend API |
 | --- | --- | --- |
-| User selects a resume PDF | `AnalysisForm` | `POST /api/resume/upload` |
+| User opens the workspace | `app/page.tsx` | Production hero, sidebar, stats shell, and tracker section render locally |
+| User selects a resume PDF | `app/page.tsx` | `POST /api/resume/upload` |
 | Backend returns extracted resume text | `uploadResumePdf` | Resume textarea is auto-filled |
-| User edits resume text or pastes manually | `AnalysisForm` | None yet |
-| User enters job description, tone, word limit, and cover letter length | `AnalysisForm` | None yet |
+| User edits resume text or pastes manually | `app/page.tsx` | None yet |
+| User enters job description, tone, word limit, and cover letter length | `app/page.tsx` | None yet |
 | User clicks `Analyze` | `frontend/lib/api.ts` | `POST /api/orchestrator/analyze-application` |
 | Backend returns full pipeline output | `analyzeApplication` | Orchestrator response |
-| UI renders summary and score | `PipelineSummaryCard`, `MatchScoreCard` | Uses `pipeline_summary`, `match_result` |
-| UI renders score evidence | `ResultsDashboard` | Uses `match_result.score_breakdown` |
-| UI renders skill groups | `ResultsDashboard`, `SkillBadge` | Uses required/preferred matched and missing skills |
-| UI renders roadmap | `SkillGapCard` | Uses priority skills, roadmap weeks, and recommended projects |
-| UI renders generated writing | `ApplicationAnswerCard`, `CoverLetterCard` | Uses generated text, tone, word count, key points, and copy buttons |
-| User clicks `Save Application` | `ResultsDashboard` | `POST /api/tracker/applications` |
+| UI renders dynamic dashboard | `app/page.tsx` | Uses `match_result`, `skill_gap_result`, `application_answer`, and `cover_letter` |
+| UI renders wide roadmap | `app/page.tsx` | Uses `skill_gap_result.learning_roadmap` and priority skill chips |
+| User copies generated writing | `app/page.tsx` | Uses browser clipboard |
+| User clicks `Save Application` | `app/page.tsx` | `POST /api/tracker/applications` |
 | UI loads saved applications | `ApplicationTracker` | `GET /api/tracker/applications` |
 | User changes status | `ApplicationTracker` | `PATCH /api/tracker/applications/{id}/status` |
 | User deletes a row | `ApplicationTracker` | `DELETE /api/tracker/applications/{id}` |
 
 If the backend is not running, the frontend displays a clear connection error from the API client.
 
-After an orchestrator response, the results dashboard displays sections in this order: pipeline summary, match score, score breakdown, skills overview, skill gap roadmap, application answer, cover letter, and tracker save controls. Missing fields are rendered with fallback text so partial backend responses do not crash the UI.
+After an orchestrator response, the production dashboard flows as: Summary -> Skills -> Roadmap -> Generated Content -> Tracker. It replaces empty values with live match score, skill coverage, project count, roadmap length, matched skills, missing skills, roadmap cards, application answer, cover letter, and tracker save controls. Missing fields are rendered with fallback text so partial backend responses do not crash the UI.
+
+Frontend demo flow: Upload resume PDF or paste resume text -> Paste JD -> Analyze -> Review dynamic dashboard -> Copy answer or cover letter -> Save application -> Track status. The page keeps resume upload, manual editing, orchestrator analysis, save controls, and tracker refresh in one responsive layout.
 
 ## Resume PDF Upload Flow
 

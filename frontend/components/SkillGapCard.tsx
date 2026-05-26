@@ -13,7 +13,7 @@ function priorityTone(priority?: string): "priority" | "missing" | "neutral" {
 
 function PrioritySkillCard({ item }: { item: PrioritySkill }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
         <h4 className="text-sm font-semibold text-slate-950">{item.skill}</h4>
         <SkillBadge label={item.priority || "Priority"} tone={priorityTone(item.priority)} />
@@ -21,7 +21,7 @@ function PrioritySkillCard({ item }: { item: PrioritySkill }) {
       <p className="mt-2 text-sm leading-6 text-slate-600">
         {item.reason || "No reason provided."}
       </p>
-      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+      <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
         Estimated learning time
       </p>
       <p className="mt-1 text-sm font-medium text-slate-900">
@@ -38,9 +38,9 @@ function PrioritySkillCard({ item }: { item: PrioritySkill }) {
 
 function RoadmapItem({ week }: { week: RoadmapWeek }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+        <span className="rounded-full bg-slate-950 shadow-sm px-3 py-1 text-xs font-semibold text-white">
           Week {week.week}
         </span>
         <h4 className="text-sm font-semibold text-slate-950">
@@ -68,7 +68,7 @@ function RoadmapItem({ week }: { week: RoadmapWeek }) {
 
 function ProjectCard({ project }: { project: RecommendedProject }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm">
       <h4 className="text-sm font-semibold text-slate-950">
         {project.title || "Recommended mini-project"}
       </h4>
@@ -97,20 +97,20 @@ export default function SkillGapCard({ skillGap }: SkillGapCardProps) {
   const projects = skillGap.recommended_projects || [];
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+    <section className="premium-card rounded-[1.75rem] p-5">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
             Skill Gap Roadmap
           </p>
-          <h3 className="mt-1 text-lg font-semibold text-slate-950">
+          <h3 className="mt-1 text-lg font-black text-slate-950">
             {skillGap.target_role || "Learning plan"}
           </h3>
         </div>
       </div>
 
       {skillGap.overall_advice ? (
-        <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm leading-6 text-amber-950">
+        <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm leading-6 text-amber-950">
           {skillGap.overall_advice}
         </p>
       ) : null}
@@ -124,7 +124,7 @@ export default function SkillGapCard({ skillGap }: SkillGapCardProps) {
                 <PrioritySkillCard key={`${item.skill}-${item.priority}`} item={item} />
               ))
             ) : (
-              <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+              <p className="rounded-2xl bg-slate-50/90 p-4 text-sm text-slate-600">
                 No priority skills returned.
               </p>
             )}
@@ -138,7 +138,7 @@ export default function SkillGapCard({ skillGap }: SkillGapCardProps) {
                 <ProjectCard key={`${project.title}-${project.expected_outcome}`} project={project} />
               ))
             ) : (
-              <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+              <p className="rounded-2xl bg-slate-50/90 p-4 text-sm text-slate-600">
                 No mini-projects returned.
               </p>
             )}
@@ -154,7 +154,7 @@ export default function SkillGapCard({ skillGap }: SkillGapCardProps) {
               <RoadmapItem key={`${week.week}-${week.focus}`} week={week} />
             ))
           ) : (
-            <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+            <p className="rounded-2xl bg-slate-50/90 p-4 text-sm text-slate-600">
               No roadmap returned.
             </p>
           )}
