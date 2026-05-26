@@ -47,7 +47,7 @@ def analyze_skill_gap(resume_profile: dict, job_profile: dict, match_result: dic
         priority = get_skill_priority(normalized_skill, required_skills, preferred_skills)
         priority_skills.append(
             {
-                "skill": _display_skill(normalized_skill),
+                "skill": format_skill_display(normalized_skill),
                 "priority": priority,
                 "reason": _get_priority_reason(normalized_skill, priority, job_profile),
                 "estimated_learning_time": get_estimated_learning_time(normalized_skill, priority),
@@ -72,7 +72,40 @@ def analyze_skill_gap(resume_profile: dict, job_profile: dict, match_result: dic
 
 
 def normalize_skill(skill: str) -> str:
-    return re.sub(r"\s+", " ", skill.strip().lower())
+    return re.sub(r"\s+", " ", str(skill or "").strip().lower())
+
+
+def format_skill_display(skill: str) -> str:
+    normalized = normalize_skill(skill).replace("_", " ")
+    compact = normalized.replace(" ", "").replace("-", "")
+    special_cases = {
+        "express.js": "Express.js",
+        "expressjs": "Express.js",
+        "rest api": "REST API",
+        "restapi": "REST API",
+        "restful api": "REST API",
+        "websockets": "WebSockets",
+        "websocket": "WebSockets",
+        "javascript": "JavaScript",
+        "typescript": "TypeScript",
+        "node.js": "Node.js",
+        "nodejs": "Node.js",
+        "next.js": "Next.js",
+        "nextjs": "Next.js",
+        "github": "GitHub",
+        "git": "Git",
+        "nlp": "NLP",
+        "css": "CSS",
+        "html": "HTML",
+        "sql": "SQL",
+        "api": "API",
+        "fastapi": "FastAPI",
+        "tailwind css": "Tailwind CSS",
+        "tailwindcss": "Tailwind CSS",
+        "problem solving": "Problem Solving",
+        "problemsolving": "Problem Solving",
+    }
+    return special_cases.get(normalized) or special_cases.get(compact) or str(skill).strip().title()
 
 
 def get_skill_priority(skill: str, required_skills: list, preferred_skills: list) -> str:
@@ -242,21 +275,7 @@ def _sort_priority_skills(priority_skills: list) -> list:
 
 
 def _display_skill(skill: str) -> str:
-    special_cases = {
-        "aws": "AWS",
-        "css": "CSS",
-        "html": "HTML",
-        "sql": "SQL",
-        "c#": "C#",
-        "c++": "C++",
-        "next.js": "Next.js",
-        "node.js": "Node.js",
-        "fastapi": "FastAPI",
-        "sqlite": "SQLite",
-        "github": "GitHub",
-        "gcp": "GCP",
-    }
-    return special_cases.get(skill, skill.title())
+    return format_skill_display(skill)
 
 
 def _normalize_projects(projects: list | None) -> list[str]:

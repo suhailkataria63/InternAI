@@ -57,11 +57,17 @@ Improved JD parsing strengthens match scoring and skill-gap priority because req
 
 Before match scoring, job description text is normalized into a structured `job_profile` with fields such as clean `role_title`, `company_name`, required skills, preferred skills, responsibilities, eligibility, duration, work mode, location, and stipend.
 
+JD skills are extracted and normalized before match scoring. Explicit `Skill(s) required` blocks are read with strict stop headings, `Other requirements` can add additional required skills, and display variants such as `HTML5`, `CSS3`, `Natural Language Processing (NLP)`, and `RESTful API integration` are normalized before the Match Scoring Agent compares them with resume skills.
+
 Improved match scoring gives the Skill Gap Agent cleaner missing required and preferred skills, and gives the Application Tracker a more explainable score breakdown for saved opportunities.
 
 Before scoring, resume skills and JD skills are normalized into canonical names so variants such as `AI`/`Artificial Intelligence`, `NLP`/`Natural Language Processing`, `React.js`/`React`, and `Scikit-Learn`/`Scikit-learn` compare cleanly. Exact required-skill scoring stays conservative, while related evidence can still improve project relevance notes.
 
 Final writing output is generated from the cleaned `resume_profile`, structured `job_profile`, `match_result`, and `skill_gap_result`. The Application Writer and Cover Letter agents choose the strongest education entry, use concise project summaries, highlight matched skills, and frame missing skills as learning focus instead of claiming them as mastered.
+
+Before the orchestrator response is returned to the frontend, backend agents polish display-facing fields: JD company and eligibility fields are cleaned, skill names use canonical casing in skill gaps and summaries, and generated writing uses compact education and project evidence.
+
+Generated application answers and cover letters also run project-summary cleanup before display. Repeated project titles, candidate bio text, `Projects include...` prefixes, and third-person fragments are removed or replaced with concise fallback summaries.
 
 ## Frontend-To-Backend Workflow
 

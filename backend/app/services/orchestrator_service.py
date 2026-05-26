@@ -3,7 +3,7 @@ from app.agents.cover_letter_agent import generate_cover_letter
 from app.agents.jd_analyzer import analyze_jd_text
 from app.agents.match_scorer import calculate_match_score
 from app.agents.resume_analyzer import analyze_resume_text
-from app.agents.skill_gap_agent import analyze_skill_gap
+from app.agents.skill_gap_agent import analyze_skill_gap, format_skill_display
 
 
 class OrchestratorStepError(Exception):
@@ -112,9 +112,9 @@ def build_pipeline_summary(
         "company_name": job_profile.get("company_name", ""),
         "match_score": match_result.get("match_score", 0),
         "match_level": match_result.get("match_level", ""),
-        "top_matched_skills": match_result.get("matched_skills", [])[:5],
-        "top_missing_skills": match_result.get("missing_skills", [])[:5],
-        "highest_priority_skills": highest_priority_skills[:5],
+        "top_matched_skills": [format_skill_display(skill) for skill in match_result.get("matched_skills", [])[:5]],
+        "top_missing_skills": [format_skill_display(skill) for skill in match_result.get("missing_skills", [])[:5]],
+        "highest_priority_skills": [format_skill_display(skill) for skill in highest_priority_skills[:5]],
         "recommended_next_step": _recommended_next_step(match_result, skill_gap_result),
     }
 
@@ -137,7 +137,7 @@ def _recommended_next_step(match_result: dict, skill_gap_result: dict) -> str:
     ]
 
     if high_priority_skills:
-        return "Start with the highest priority missing skills: " + ", ".join(high_priority_skills[:3]) + "."
+        return "Start with the highest priority missing skills: " + ", ".join(format_skill_display(skill) for skill in high_priority_skills[:3]) + "."
     if missing_skills:
-        return "Add clearer evidence for missing skills: " + ", ".join(missing_skills[:3]) + "."
+        return "Add clearer evidence for missing skills: " + ", ".join(format_skill_display(skill) for skill in missing_skills[:3]) + "."
     return "Review the generated application answer and cover letter for company-specific details before submitting."

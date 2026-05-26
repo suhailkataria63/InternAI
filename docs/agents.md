@@ -110,13 +110,19 @@ Internal logic:
 - Extracts clean role titles from labels such as `Role` and `Position`, and from phrases such as `As an Artificial Intelligence (AI) Intern at COMPANY`, `hiring an AI/ML Intern`, `hiring for AI/ML Intern`, `applying for the X role`, and `AI/ML Intern for 6 months`.
 - Cleans role titles by removing trailing work-mode/duration/context phrases and rejecting noisy matches such as `deployment experience`, `the internship`, `required skills`, `responsibilities`, `candidate should`, and `selected intern`.
 - Extracts company name from labels such as `Company`, from `About HEXACARE PHARMACEUTICALS PVT LTD`, uppercase company blocks, common suffixes such as `PVT LTD`, `Private Limited`, `Ltd`, `LLP`, `Inc`, and from `at Example AI Startup`.
+- Extracts company names from `About CompanyName` sections anywhere in the job description, including short mixed-case names such as `About SubSpace`, while ignoring generic headings like `About the internship`.
 - Uses a centralized skill dictionary covering frontend, backend, AI/ML, data, API, Git, Docker, and soft-skill terms.
+- Parses explicit skill blocks with strict section boundaries, including headings such as `Skill(s) required`, `Skills required`, `Required skills`, and `Skills`.
+- Stops skill blocks before headings such as `Who can apply`, `Other requirements`, `Perks`, `Additional information`, `Number of openings`, and `About`.
+- Normalizes skill display names such as `Natural Language Processing (NLP)` to `NLP`, `HTML5` to `HTML`, `CSS3` to `CSS`, `RESTful API integration` to `REST API`, `Node.js/Express` to `Node.js` plus `Express.js`, and `problem-solving` to `Problem Solving`.
+- Scans `Other requirements` for additional required skills such as debugging, REST API, Git, GitHub, WebSockets, and software architecture, then appends them after explicit required skills without duplicates.
 - Treats skills as required only when they appear near required phrases such as `required skills`, `must have`, `mandatory`, `candidate should have`, `should know`, `need experience in`, or `strong knowledge of`.
 - Treats skills as preferred only when they appear near preferred phrases such as `preferred skills`, `good to have`, `nice to have`, `bonus`, `plus`, `preferred qualifications`, `additional skills`, or `familiarity with`.
 - Keeps skills that appear only in preferred sections out of `required_skills`; when a skill appears in both places, it remains required and is removed from preferred.
 - Falls back to whole-description skill extraction only when no explicit required skill context exists.
-- Extracts responsibilities from sections and phrases such as `responsibilities include`, `selected intern's day-to-day responsibilities include`, `you will`, `work on`, and `tasks include`.
+- Extracts responsibilities from sections and phrases such as `responsibilities include`, `selected intern's day-to-day responsibilities include`, `you will`, `work on`, and `tasks include`, while stopping before skill, eligibility, other requirement, and perks headings.
 - Extracts eligibility from lines mentioning students, candidates, degree, year, semester, availability, relevant skills, or interests.
+- Cleans eligibility output so section headings such as `Who can apply`, `Other requirements`, `Perks`, and `Additional information` are not returned as eligibility items.
 - Keeps responsibilities, eligibility, and perks separated where recognizable section headings are present.
 - Extracts stipend, duration, and location from labeled fields or common inline patterns, including unpaid roles and rupee/INR stipends.
 - Detects work mode as `Remote`, `Work From Home`, `Hybrid`, `On-site`, or `Not specified`.
@@ -278,6 +284,7 @@ Internal logic:
 - Builds a week-by-week roadmap ordered by priority.
 - Suggests resume improvements based on missing skills, project evidence, experience, and target role.
 - Recommends mini-projects that can prove missing skills in a recruiter-friendly way.
+- Formats skill names consistently in priority skills, learning roadmap, resume suggestions, and recommended projects, including casing such as `Express.js`, `REST API`, `WebSockets`, `JavaScript`, `Node.js`, and `Next.js`.
 
 Current limitations:
 
@@ -344,6 +351,10 @@ Internal logic:
 - Selects the best education entry, preferring `B.Tech`, `BTech`, `Bachelor`, `B.E`, engineering, AI, data science, computer science, degree, and currently pursuing signals over `Diploma` or `Class X`.
 - Extracts a clean target role, matched skills, relevant projects, and learning focus.
 - Converts structured project objects into concise writing summaries using the project name, the strongest evidence sentence, and the top technologies.
+- Cleans education phrases for writing so long college/year strings become concise phrases such as `B.Tech in Artificial Intelligence and Data Science`.
+- Removes noisy project-description prefixes such as `Projects include...` and avoids awkward phrasing like `where I Projects include...`.
+- Uses project-specific fallback summaries when extracted descriptions contain repeated titles, candidate bio text, third-person fragments, or broken phrases such as `I Strategic Classification System`.
+- Runs a light final text cleanup before returning generated answers.
 - Uses the top two projects and top four to five matched skills so answers stay readable.
 - Frames missing skills as active learning or improvement areas instead of mastered skills.
 - Keeps `key_points_used` concise with education, target role, company when available, matched skills, project names, and learning focus.
@@ -418,6 +429,8 @@ Internal logic:
 - Handles missing company names gracefully in the subject line and opening sentence.
 - Avoids treating `Class X` as current education when a stronger degree such as `B.Tech` or `Bachelor` is present.
 - Converts long project descriptions into concise evidence and keeps project names in `key_points_used`.
+- Uses the same education and project cleanup as the Application Writer so the cover letter avoids repeated project titles, generic bio text, and fragments such as `at background`.
+- Formats project evidence with stable sentence patterns and fallback summaries so cover letters do not contain fragments such as `where he worked` or `I Hybrid Phishing Detection System`.
 - Uses a clean professional format: opening/background paragraph, project-relevance paragraph, learning-gap paragraph, and polite closing.
 - Falls back to `the internship role` when the role title is empty or suspicious.
 - Mentions missing skills only as active learning areas.

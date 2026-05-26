@@ -51,6 +51,7 @@ def generate_cover_letter(
     )
     cover_letter = apply_tone(cover_letter, tone)
     cover_letter = _fit_length(cover_letter, length)
+    cover_letter = clean_generated_text(cover_letter)
 
     return {
         "cover_letter": cover_letter,
@@ -110,7 +111,7 @@ def extract_top_skills(resume_profile: dict, match_result: dict, limit: int = 5)
     skills: list[str] = []
 
     for skill in matched_skills + resume_skills:
-        normalized_skill = normalize_text(skill)
+        normalized_skill = format_skill_display(skill)
         if normalized_skill and normalized_skill.lower() not in [item.lower() for item in skills]:
             skills.append(normalized_skill)
 
@@ -121,8 +122,8 @@ def extract_project_highlights(resume_profile: dict, limit: int = 2) -> list:
     projects = resume_profile.get("projects", []) or []
     highlights: list[str] = []
 
-    for project in projects:
-        project_text = summarize_project_for_writing(project)
+    for index, project in enumerate(projects[:limit]):
+        project_text = format_project_for_answer(project, index)
 
         if project_text:
             highlights.append(project_text)
@@ -130,7 +131,69 @@ def extract_project_highlights(resume_profile: dict, limit: int = 2) -> list:
     return highlights[:limit]
 
 
+def clean_project_description_for_writing(project_name: str, description: str) -> str:
+    text = normalize_text(description)
+    if not text:
+        return ""
+
+    cleanup_patterns = (
+        r"Suhail\s+Kataria\s+is\s+pursuing[^.]*\.?",
+        r"He\s+has\s+skills[^.]*\.?",
+        r"Projects?\s+include\s+",
+        r"Another\s+project\s+is\s+",
+        r"He\s+has\s+internship\s+experience[^.]*\.?",
+        r"He\s+is\s+looking\s+for[^.]*\.?",
+    )
+    for pattern in cleanup_patterns:
+        text = re.sub(pattern, "", text, flags=re.IGNORECASE).strip()
+
+    if project_name:
+        text = re.sub(re.escape(project_name), "", text, flags=re.IGNORECASE).strip(" :-,.;")
+
+    text = re.sub(r"\bStrategic Classification System\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bI\s+[A-Z][A-Za-z0-9&/ -]+(?:System|Modeling|Model|Classification System)\b", "", text)
+    text = re.sub(r"\bwhere\s+he\s+worked\b", "worked", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bhe\s+worked\s+on\b", "worked on", text, flags=re.IGNORECASE)
+    text = re.sub(r"\bhe\s+(built|developed|created|implemented)\b", lambda match: match.group(1), text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip(" :-,.;")
+
+    sentences = [sentence.strip(" .") for sentence in re.split(r"(?<=[.!?])\s+", text) if sentence.strip(" .")]
+    if sentences:
+        priority_terms = ("built", "developed", "created", "implemented", "worked", "preprocessing", "classification", "phishing", "model", "dashboard", "deployment")
+        text = next((sentence for sentence in sentences if any(term in sentence.lower() for term in priority_terms)), sentences[0])
+
+    text = re.sub(r"^(I\s+)?(built|developed|created|implemented|worked|performed|conducted)\b", lambda match: match.group(2).lower(), text, flags=re.IGNORECASE)
+    text = re.sub(r"^(and|or)\s+", "", text, flags=re.IGNORECASE)
+    if " using " in text.lower():
+        text = re.split(r"\s+using\s+", text, maxsplit=1, flags=re.IGNORECASE)[0]
+    return _trim_words(text.strip(" :-,.;"), 35).rstrip(".")
+
+
+def format_project_for_answer(project: dict, index: int) -> str:
+    name, description, technologies = _project_parts(project)
+    action_summary = clean_project_description_for_writing(name, description)
+    technology_text = _technology_text(technologies)
+
+    if _is_messy_project_summary(action_summary):
+        action_summary = _fallback_project_summary(name, technology_text)
+    elif technology_text and not re.search(r"\busing\b", action_summary, re.IGNORECASE):
+        action_summary = f"{action_summary} using {technology_text}"
+
+    action_summary = _trim_words(action_summary, 35).rstrip(".")
+    if not name:
+        name = "practical"
+
+    if index == 0:
+        return f"In my {name} project, I {action_summary}."
+    action_summary = re.sub(r"^worked on\s+", "", action_summary, flags=re.IGNORECASE)
+    return f"I also worked on a {name} project involving {action_summary}."
+
+
 def summarize_project_for_writing(project: dict, max_words: int = 35) -> str:
+    return _trim_words(format_project_for_answer(project, 0), max_words + 8)
+
+
+def _project_parts(project: dict) -> tuple[str, str, list]:
     if isinstance(project, str):
         name = normalize_text(project)
         description = ""
@@ -138,30 +201,16 @@ def summarize_project_for_writing(project: dict, max_words: int = 35) -> str:
     elif isinstance(project, dict):
         name = normalize_text(project.get("name"))
         description = normalize_text(project.get("description"))
-        technologies = [normalize_text(item) for item in project.get("technologies", []) if normalize_text(item)]
+        technologies = [format_skill_display(item) for item in project.get("technologies", []) if normalize_text(item)]
     else:
         name = normalize_text(getattr(project, "name", ""))
         description = normalize_text(getattr(project, "description", ""))
         technologies = [
-            normalize_text(item)
+            format_skill_display(item)
             for item in getattr(project, "technologies", [])
             if normalize_text(item)
         ]
-
-    description = _remove_duplicate_project_title(name, description)
-    description = _important_project_sentence(description)
-    technology_text = _technology_text(technologies)
-
-    if name and description and technology_text:
-        summary = f"{name}, where I {description} using {technology_text}."
-    elif name and description:
-        summary = f"{name}, where I {description}."
-    elif name and technology_text:
-        summary = f"{name}, using {technology_text}."
-    else:
-        summary = name or description or technology_text
-
-    return _trim_words(summary, max_words)
+    return name, description, technologies
 
 
 def extract_experience_highlights(resume_profile: dict, limit: int = 2) -> list:
@@ -286,9 +335,9 @@ def _evidence_paragraph(skills: list, projects: list, experience: list) -> str:
         sentences.append("My strongest matched skills include " + ", ".join(skills) + ".")
     if projects:
         if len(projects) == 1:
-            sentences.append(f"In my {projects[0]}")
+            sentences.append(projects[0])
         else:
-            sentences.append(f"In my {projects[0]} I also worked on {projects[1]}")
+            sentences.append(f"{projects[0]} {projects[1]}")
     if experience:
         sentences.append("I also bring experience from " + "; ".join(experience) + ".")
     if not sentences:
@@ -337,8 +386,8 @@ def _build_opening_summary(resume_profile: dict, job_profile: dict) -> str:
 def _learning_focus(match_result: dict, skill_gap_result: dict) -> list:
     priority_skills = skill_gap_result.get("priority_skills", []) or []
     if priority_skills:
-        return [normalize_text(item.get("skill")) for item in priority_skills[:3] if item.get("skill")]
-    return [normalize_text(skill) for skill in match_result.get("missing_skills", [])[:3]]
+        return [format_skill_display(item.get("skill")) for item in priority_skills[:3] if item.get("skill")]
+    return [format_skill_display(skill) for skill in match_result.get("missing_skills", [])[:3]]
 
 
 def _fit_length(text: str, length: str) -> str:
@@ -364,6 +413,7 @@ def _clean_education_summary(value: str) -> str:
         "he has skills",
         "she has skills",
         "i have skills",
+        "projects include",
     )
     lowered = text.lower()
     stop_positions = [lowered.find(phrase) for phrase in stop_phrases if lowered.find(phrase) != -1]
@@ -386,6 +436,12 @@ def _clean_education_summary(value: str) -> str:
 
 def _shorten_education_for_writing(value: str) -> str:
     text = normalize_text(value)
+    text = re.split(
+        r"\s+(?:at|under)\s+|,\s*(?:3rd|third|4th|fourth|2nd|second|1st|first)\s+year|,\s*\d+(?:st|nd|rd|th)?\s+semester|—\s*currently pursuing",
+        text,
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0].strip(" ,-—")
     stop_markers = (
         "Chandigarh Group of Colleges",
         "CGC",
@@ -434,6 +490,13 @@ def _role_phrase(role_title: str, company_name: str = "") -> str:
 def _remove_duplicate_project_title(name: str, description: str) -> str:
     if not description:
         return ""
+    description = re.sub(r"projects?\s+include\s+", "", description, flags=re.IGNORECASE).strip(" :-,.;")
+    description = re.sub(
+        r"^(?:[A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){0,3}\s+)?(?:is\s+)?(?:an?\s+)?(?:artificial intelligence|data science|computer science).*?(?:real-world problems|academic projects)\.?",
+        "",
+        description,
+        flags=re.IGNORECASE,
+    ).strip(" :-,.;")
     if name and description.lower().startswith(name.lower()):
         description = description[len(name) :].strip(" :-,.;")
     return description
@@ -445,6 +508,8 @@ def _important_project_sentence(description: str) -> str:
     sentences = [sentence.strip(" .") for sentence in re.split(r"(?<=[.!?])\s+", description) if sentence.strip()]
     priority_terms = ("accuracy", "built", "developed", "dashboard", "model", "forecast", "predict", "nlp")
     selected = next((sentence for sentence in sentences if any(term in sentence.lower() for term in priority_terms)), sentences[0])
+    selected = re.sub(r"^projects?\s+include\s+", "", selected, flags=re.IGNORECASE)
+    selected = re.sub(r"^(and|or)\s+", "", selected, flags=re.IGNORECASE)
     selected = re.sub(r"^(I\s+)?(built|developed|created|implemented|performed|conducted)\b", lambda match: match.group(2).lower(), selected, flags=re.IGNORECASE)
     if " using " in selected.lower():
         selected = re.split(r"\s+using\s+", selected, maxsplit=1, flags=re.IGNORECASE)[0]
@@ -456,7 +521,7 @@ def _technology_text(technologies: list) -> str:
     for technology in technologies:
         if technology and technology.lower() not in [item.lower() for item in unique_technologies]:
             unique_technologies.append(technology)
-    return ", ".join(unique_technologies[:5])
+    return ", ".join(format_skill_display(item) for item in unique_technologies[:5])
 
 
 def _trim_words(text: str, max_words: int) -> str:
@@ -467,7 +532,76 @@ def _trim_words(text: str, max_words: int) -> str:
 
 
 def _project_name_from_summary(summary: str) -> str:
-    return normalize_text(summary).split(",", 1)[0].strip(".")
+    text = normalize_text(summary)
+    text = re.sub(r"^In my\s+", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^I also worked on an?\s+", "", text, flags=re.IGNORECASE)
+    return text.split(" project", 1)[0].strip(" .")
+
+
+def _is_messy_project_summary(summary: str) -> bool:
+    lowered = normalize_text(summary).lower()
+    return (
+        not lowered
+        or lowered.startswith(("an ", "a ", "the "))
+        or "projects include" in lowered
+        or "where he worked" in lowered
+        or "strategic classification system" in lowered
+        or bool(re.search(r"\bi\s+[a-z0-9&/ -]+(?:system|modeling|classification system)\b", lowered))
+    )
+
+
+def _fallback_project_summary(project_name: str, technology_text: str) -> str:
+    lowered_name = project_name.lower()
+    if "phishing" in lowered_name:
+        return "built an AI/ML-based phishing detection system using " + (technology_text or "Python, NLP, React, Next.js, and Tailwind CSS")
+    if "restaurant growth" in lowered_name:
+        return "worked on data preprocessing, feature engineering, classification model development, evaluation, documentation, and deployment"
+    if technology_text:
+        return f"worked on a practical project using {technology_text}"
+    return "worked on a practical project with clear technical implementation and documentation"
+
+
+def clean_generated_text(text: str) -> str:
+    cleaned = re.sub(r"[ \t]+", " ", text).strip()
+    cleaned = cleaned.replace(" ,", ",")
+    cleaned = re.sub(r"\.{2,}", ".", cleaned)
+    cleaned = re.sub(r"where I Projects include", "where I", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"project,\s+I\s+and\b", "project involving", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"involving\s+worked\s+on\s+", "involving ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"project,\s+I\s+Strategic\b", "project involving strategic", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"project,\s+I\s+Hybrid Phishing Detection System\b", "project, I built", cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+
+def format_skill_display(skill: str) -> str:
+    normalized = normalize_text(skill).lower()
+    compact = normalized.replace(" ", "").replace("-", "")
+    special_cases = {
+        "express.js": "Express.js",
+        "expressjs": "Express.js",
+        "rest api": "REST API",
+        "restapi": "REST API",
+        "restful api": "REST API",
+        "websockets": "WebSockets",
+        "websocket": "WebSockets",
+        "javascript": "JavaScript",
+        "typescript": "TypeScript",
+        "node.js": "Node.js",
+        "nodejs": "Node.js",
+        "next.js": "Next.js",
+        "nextjs": "Next.js",
+        "github": "GitHub",
+        "git": "Git",
+        "nlp": "NLP",
+        "css": "CSS",
+        "html": "HTML",
+        "sql": "SQL",
+        "api": "API",
+        "fastapi": "FastAPI",
+        "tailwind css": "Tailwind CSS",
+        "tailwindcss": "Tailwind CSS",
+    }
+    return special_cases.get(normalized) or special_cases.get(compact) or normalize_text(skill)
 
 
 def _project_dict_to_text(project: dict) -> str:

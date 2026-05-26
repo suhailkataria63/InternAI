@@ -253,6 +253,10 @@ Input: raw job description text in the `job_description` field.
 
 Processing: the current implementation uses improved rule-based extraction for role title, company, required skills, preferred skills, responsibilities, eligibility, stipend, duration, location, work mode, and keywords. It prioritizes clean role patterns such as `As an Artificial Intelligence (AI) Intern at COMPANY`, `hiring an AI/ML Intern`, and `role: AI/ML Intern`, rejects noisy phrases such as `deployment experience` or `selected intern`, extracts company names from `Company:`, `About COMPANY`, uppercase company blocks, and common suffixes like `PVT LTD`, and separates required skills from preferred skills by looking for phrases such as `required skills`, `must have`, and `candidate should have` versus `preferred skills`, `good to have`, `nice to have`, and `familiarity with`.
 
+Strict JD skill parsing: the analyzer now reads heading-bounded blocks such as `Skill(s) required` until `Who can apply`, `Other requirements`, `Perks`, or similar stop headings. It preserves explicit skill order, normalizes display names such as `Natural Language Processing (NLP)` to `NLP`, `HTML5` to `HTML`, `CSS3` to `CSS`, and `RESTful API integration` to `REST API`, and merges additional skills from `Other requirements` into `required_skills`.
+
+Backend output polish: company extraction supports `About SubSpace` style sections anywhere in the JD, eligibility output removes section headings, skill-gap displays use canonical casing such as `Express.js`, `REST API`, `WebSockets`, and `JavaScript`, and generated writing uses cleaner education and project summaries before returning results to the frontend.
+
 Output: a normalized `job_profile` object that future matching agents can compare against the parsed resume profile.
 
 Example parsed JD output:
@@ -538,6 +542,8 @@ Processing: the current implementation detects the question type, selects a temp
 
 Writing quality improvements: the agent prefers higher education such as `B.Tech`, `Bachelor`, engineering, AI, data science, or computer science over `Class X`; converts long project objects into concise evidence such as `Hybrid Phishing Detection System`; keeps `key_points_used` short; and limits learning focus to the most important missing skills.
 
+The writer also removes noisy phrases such as `Projects include...`, repeated project titles, third-person fragments such as `where he worked`, and broken project fragments before using cleaner sentences such as `In my Hybrid Phishing Detection System project, I built...`. When a project description is still messy, it falls back to a safe project-specific summary.
+
 Output: the original question, generated answer, key points used, tone, word count, and an improvement note.
 
 Generate a customized cover letter:
@@ -603,6 +609,8 @@ Input: `resume_profile`, `job_profile`, `match_result`, `skill_gap_result`, opti
 Processing: the current implementation builds a subject line, opening summary, role-specific body, best education summary, matched skill evidence, concise project highlights, and a learning-gap sentence. It starts with `Dear Hiring Team,`, handles missing company names without awkward `at` text, uses clean role-title fallbacks, ends politely, and avoids presenting missing skills as already mastered.
 
 Cover letter quality improvements: the agent avoids treating `Class X` as current education when a stronger degree exists, keeps project evidence short, uses one background paragraph, one project-relevance paragraph, and a closing section, and keeps `key_points_used` focused on education, role, company, matched skills, project names, and learning focus.
+
+The cover letter uses the same backend cleanup as application answers, so education does not end in awkward fragments such as `at background`, and project summaries avoid repeated titles, `where I Projects include...`, `I Strategic Classification System`, and similar broken phrasing.
 
 Output: `cover_letter`, `subject_line`, `opening_summary`, `key_points_used`, `tone`, and `word_count`.
 

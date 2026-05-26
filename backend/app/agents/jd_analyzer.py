@@ -36,6 +36,7 @@ SKILL_ALIASES = {
     "React": ("react", "react.js", "reactjs"),
     "Next.js": ("next.js", "nextjs", "next js"),
     "Node.js": ("node.js", "nodejs", "node js"),
+    "Express.js": ("express.js", "expressjs", "express"),
     "FastAPI": ("fastapi", "fast api"),
     "Django": ("django",),
     "Flask": ("flask",),
@@ -61,9 +62,10 @@ SKILL_ALIASES = {
     "GitHub": ("github", "git hub"),
     "REST API": ("rest api", "restful api", "rest apis", "restful apis"),
     "Tailwind CSS": ("tailwind css", "tailwind"),
-    "HTML": ("html",),
-    "CSS": ("css",),
+    "HTML": ("html", "html5"),
+    "CSS": ("css", "css3"),
     "Problem Solving": ("problem solving", "problem-solving"),
+    "Debugging": ("debugging",),
     "Communication": ("communication", "communication skills"),
     "APIs": ("apis", "api integration", "api integrations"),
     "Backend Development": ("backend development", "backend"),
@@ -73,9 +75,13 @@ SKILL_ALIASES = {
     "Data Science": ("data science",),
     "Neural Networks": ("neural networks", "neural network"),
     "Natural Language Processing (NLP)": ("natural language processing", "natural language processing (nlp)"),
+    "WebSockets": ("websockets", "web sockets", "websocket"),
+    "Software Architecture": ("software architecture", "software design", "architecture patterns"),
 }
 
 REQUIRED_SECTION_KEYWORDS = [
+    "skill(s) required",
+    "skills",
     "required skills",
     "must have",
     "must-have",
@@ -124,6 +130,8 @@ ELIGIBILITY_KEYWORDS = [
 ]
 
 STOP_SECTION_KEYWORDS = [
+    "skill(s) required",
+    "skills required",
     "required skills",
     "preferred skills",
     "good to have",
@@ -146,6 +154,8 @@ STOP_SECTION_KEYWORDS = [
     "about",
     "company",
     "perks",
+    "other requirements",
+    "additional information",
     "number of openings",
     "openings",
     "certificate",
@@ -195,6 +205,93 @@ def split_lines(text: str) -> list:
     return [line.strip(" -•\t") for line in text.splitlines() if line.strip(" -•\t")]
 
 
+def get_section_lines(lines: list[str], start_headings: list[str], stop_headings: list[str]) -> list[str]:
+    collected = []
+    active = False
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        if not active and _heading_matches(stripped, start_headings):
+            active = True
+            continue
+
+        if active and _heading_matches(stripped, stop_headings):
+            break
+
+        if active:
+            collected.append(stripped)
+
+    return collected
+
+
+def extract_explicit_required_skills(lines: list[str]) -> list[str]:
+    skill_lines = get_section_lines(
+        lines,
+        ["Skill(s) required", "Skills required", "Required skills", "Skills"],
+        ["Who can apply", "Other requirements", "Perks", "Additional information", "Number of openings", "About"],
+    )
+    skills = []
+    for line in skill_lines:
+        skills.extend(_skills_from_requirement_line(line))
+    return deduplicate_preserve_order(skills)
+
+
+def normalize_skill_display(skill: str) -> str:
+    value = re.sub(r"\s+", " ", str(skill or "")).strip(" -•\t:,.")
+    lowered = value.lower()
+    normalized = re.sub(r"[^a-z0-9.+#/-]+", " ", lowered).strip()
+
+    if "natural language processing" in lowered or normalized == "nlp":
+        return "NLP"
+    if normalized in {"html", "html5"}:
+        return "HTML"
+    if normalized in {"css", "css3"}:
+        return "CSS"
+    if "restful api" in lowered or "rest api" in lowered or normalized in {"rest", "restful apis"}:
+        return "REST API"
+    if normalized in {"node.js", "nodejs", "node js"}:
+        return "Node.js"
+    if normalized in {"express.js", "expressjs", "express"}:
+        return "Express.js"
+    if normalized in {"next.js", "nextjs", "next js"}:
+        return "Next.js"
+    if normalized in {"react", "react.js", "reactjs"}:
+        return "React"
+    if normalized == "javascript":
+        return "JavaScript"
+    if normalized == "python":
+        return "Python"
+    if normalized == "sql":
+        return "SQL"
+    if normalized in {"tailwind", "tailwind css"}:
+        return "Tailwind CSS"
+    if normalized == "git":
+        return "Git"
+    if normalized in {"github", "git hub"}:
+        return "GitHub"
+    if normalized in {"websockets", "web sockets", "websocket"}:
+        return "WebSockets"
+    if normalized in {"problem-solving", "problem solving", "analytical thinking"}:
+        return "Problem Solving"
+    if normalized == "debugging":
+        return "Debugging"
+    if "software design" in lowered or "architecture pattern" in lowered or "software architecture" in lowered:
+        return "Software Architecture"
+
+    for display_name, aliases in SKILL_ALIASES.items():
+        if any(_skill_alias_found(lowered, alias) for alias in aliases):
+            if display_name == "Natural Language Processing (NLP)":
+                return "NLP"
+            if display_name == "APIs":
+                return "API"
+            return display_name
+
+    return value
+
+
 def extract_role_title(text: str, lines: list) -> str:
     role_suffix = r"(?:developer\s+intern|engineer\s+intern|analyst\s+intern|associate\s+intern|intern|developer|engineer|analyst|associate)"
     patterns = (
@@ -226,6 +323,7 @@ def extract_role_title(text: str, lines: list) -> str:
 def extract_company_name(text: str, lines: list) -> str:
     patterns = (
         r"(?:company|organization|employer)\s*:\s*([^\n.]+)",
+        r"^About\s+([^\n.]{2,100})$",
         r"^About\s+([A-Z][A-Z0-9&.' -]{2,100}(?:PVT LTD|PRIVATE LIMITED|LTD|LLP|INC|TECHNOLOGIES)?)\s*$",
         r"\bAs\s+an?\s+[A-Za-z0-9/() .+-]+?\b(?:developer\s+intern|engineer\s+intern|analyst\s+intern|associate\s+intern|intern|developer|engineer|analyst|associate)\s+at\s+([^,\n.]+)",
         r"([A-Z][A-Za-z0-9&.' -]{2,70})\s+is\s+hiring\b",
@@ -238,12 +336,12 @@ def extract_company_name(text: str, lines: list) -> str:
             if not _looks_like_role(value):
                 return value
 
-    for line in lines[:8]:
+    for line in lines:
         if line.lower().startswith("company:"):
             return clean_company_name(line.split(":", 1)[1])
         if line.lower().startswith("about "):
             company = clean_company_name(line[6:])
-            if company and not _looks_like_role(company):
+            if company and not _looks_like_role(company) and not _is_generic_about_heading(company):
                 return company
     return ""
 
@@ -280,13 +378,16 @@ def extract_skills_from_text(text: str) -> list:
     for display_name, aliases in SKILL_ALIASES.items():
         for alias in aliases:
             if _skill_alias_found(lowered_text, alias):
-                skills.append(display_name)
+                skills.append(normalize_skill_display(display_name))
                 break
 
     return deduplicate_preserve_order(skills)
 
 
 def extract_required_skills(text: str, lines: list) -> list:
+    explicit_required_skills = extract_explicit_required_skills(lines)
+    other_requirement_skills = extract_skills_from_other_requirements(lines)
+
     required_text = extract_section_text(text, REQUIRED_SECTION_KEYWORDS, STOP_SECTION_KEYWORDS)
     required_contexts = _extract_inline_contexts(text, REQUIRED_SECTION_KEYWORDS)
     required_skills = extract_skills_from_text("\n".join([required_text] + required_contexts))
@@ -302,7 +403,7 @@ def extract_required_skills(text: str, lines: list) -> list:
             skill for skill in fallback_skills if _normalize_skill(skill) not in preferred_normalized
         ]
 
-    return deduplicate_preserve_order(required_skills)
+    return deduplicate_preserve_order(explicit_required_skills + other_requirement_skills + required_skills)
 
 
 def extract_preferred_skills(text: str, lines: list) -> list:
@@ -312,7 +413,12 @@ def extract_preferred_skills(text: str, lines: list) -> list:
 
 
 def extract_responsibilities(text: str, lines: list) -> list:
-    section_text = extract_section_text(text, RESPONSIBILITY_KEYWORDS, STOP_SECTION_KEYWORDS)
+    responsibility_lines = get_section_lines(
+        lines,
+        ["Selected intern's day-to-day responsibilities include", "Responsibilities", "Responsibilities include", "Day-to-day responsibilities"],
+        ["Skill(s) required", "Skills required", "Who can apply", "Other requirements", "Perks", "Additional information"],
+    )
+    section_text = "\n".join(responsibility_lines) or extract_section_text(text, RESPONSIBILITY_KEYWORDS, STOP_SECTION_KEYWORDS)
     items = _split_items(section_text)
 
     patterns = (
@@ -327,15 +433,24 @@ def extract_responsibilities(text: str, lines: list) -> list:
         for match in re.finditer(pattern, text, flags=re.IGNORECASE):
             items.extend(_split_items(match.group(1)))
 
-    return deduplicate_preserve_order(_clean_items(items))[:8]
+    return [
+        item
+        for item in deduplicate_preserve_order(_clean_items(items))[:8]
+        if not _heading_matches(item, ["Skill(s) required", "Skills required"])
+    ]
 
 
 def extract_eligibility(text: str, lines: list) -> list:
-    section_text = extract_section_text(text, ELIGIBILITY_KEYWORDS, STOP_SECTION_KEYWORDS)
+    eligibility_lines = get_section_lines(
+        lines,
+        ["Who can apply", "Eligibility", "Candidates can apply"],
+        ["Skill(s) required", "Skills required", "Other requirements", "Perks", "Additional information", "Number of openings", "About"],
+    )
+    section_text = "\n".join(eligibility_lines) or extract_section_text(text, ELIGIBILITY_KEYWORDS, STOP_SECTION_KEYWORDS)
     eligibility_items = _split_items(section_text)
 
-    for line in lines:
-        if _contains_any(line, ELIGIBILITY_KEYWORDS):
+    for line in eligibility_lines:
+        if _contains_any(line, ELIGIBILITY_KEYWORDS) and not _is_metadata_heading(line):
             eligibility_items.append(line)
 
     patterns = (
@@ -347,7 +462,11 @@ def extract_eligibility(text: str, lines: list) -> list:
         for match in re.finditer(pattern, text, flags=re.IGNORECASE):
             eligibility_items.append(match.group(1).strip())
 
-    return deduplicate_preserve_order(_clean_items(eligibility_items))[:8]
+    return [
+        item
+        for item in deduplicate_preserve_order(_clean_items(eligibility_items))[:8]
+        if not _is_metadata_heading(item) and not _is_generic_eligibility_intro(item)
+    ]
 
 
 def extract_stipend(text: str) -> str:
@@ -385,6 +504,8 @@ def extract_work_mode(text: str) -> str:
         return "Work from home"
     if "remote" in lowered_text:
         return "Remote"
+    if "full time (in-office) internship" in lowered_text or "in-office internship" in lowered_text or "in-office" in lowered_text:
+        return "In-office"
     if "on-site" in lowered_text or "onsite" in lowered_text or "in office" in lowered_text:
         return "On-site"
     return "Not specified"
@@ -422,6 +543,82 @@ def deduplicate_preserve_order(items: list) -> list:
             unique_items.append(value)
 
     return unique_items
+
+
+def extract_skills_from_other_requirements(lines: list[str]) -> list[str]:
+    requirement_lines = get_section_lines(
+        lines,
+        ["Other requirements"],
+        ["Who can apply", "Perks", "Additional information", "Number of openings", "About"],
+    )
+    skills = []
+    for line in requirement_lines:
+        skills.extend(_skills_from_requirement_line(line))
+    return deduplicate_preserve_order(skills)
+
+
+def _skills_from_requirement_line(line: str) -> list[str]:
+    cleaned = re.sub(r"^\d+[\).]\s*", "", line).strip(" -•\t.")
+    if not cleaned:
+        return []
+
+    lowered = cleaned.lower()
+    skills = []
+
+    if re.search(r"\bnode\.?js\s*/\s*express\b|\bnodejs\s*/\s*express\b", lowered):
+        skills.extend(["Node.js", "Express.js"])
+
+    for part in re.split(r",|;|\||/|\band\b|\bsuch as\b", cleaned, flags=re.IGNORECASE):
+        display = normalize_skill_display(part)
+        if _looks_like_skill(display):
+            skills.append(display)
+
+    for display_name, aliases in SKILL_ALIASES.items():
+        if any(_skill_alias_found(lowered, alias) for alias in aliases):
+            skills.append(normalize_skill_display(display_name))
+
+    skills = deduplicate_preserve_order(skills)
+    if "REST API" in skills:
+        skills = [skill for skill in skills if skill != "API"]
+    return skills
+
+
+def _looks_like_skill(value: str) -> bool:
+    if not value:
+        return False
+    normalized = _normalize_skill(value)
+    known = {_normalize_skill(normalize_skill_display(skill)) for skill in SKILL_ALIASES}
+    extra = {
+        "nlp",
+        "html",
+        "css",
+        "rest api",
+        "node.js",
+        "express.js",
+        "next.js",
+        "react",
+        "sql",
+        "tailwind css",
+        "git",
+        "github",
+        "websockets",
+        "problem solving",
+        "debugging",
+        "software architecture",
+    }
+    return normalized in known or normalized in extra
+
+
+def _heading_matches(line: str, headings: list[str]) -> bool:
+    normalized = _normalize_heading(line)
+    return any(normalized == _normalize_heading(heading) for heading in headings)
+
+
+def _normalize_heading(value: str) -> str:
+    text = str(value or "").lower().strip(" -•\t:")
+    text = text.replace("(s)", "s")
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _extract_inline_contexts(text: str, phrases: list) -> list:
@@ -473,6 +670,7 @@ def _clean_items(items: list) -> list:
     cleaned_items = []
     for item in items:
         value = re.sub(r"\s+", " ", str(item)).strip(" -•\t.")
+        value = re.sub(r"^\d+[\).]\s*", "", value).strip()
         if value:
             cleaned_items.append(value)
     return cleaned_items
@@ -526,6 +724,33 @@ def clean_company_name(text: str) -> str:
     return company[:100].strip(" -•\t:,.")
 
 
+def _is_generic_about_heading(value: str) -> bool:
+    return value.strip().lower() in {
+        "the internship",
+        "internship",
+        "company",
+        "us",
+        "about the internship",
+    }
+
+
+def _is_metadata_heading(value: str) -> bool:
+    return _heading_matches(
+        value,
+        ["Who can apply", "Other requirements", "Perks", "Additional information", "Number of openings"],
+    )
+
+
+def _is_generic_eligibility_intro(value: str) -> bool:
+    lowered = value.strip().lower()
+    return lowered in {
+        "only those candidates can apply who",
+        "only those candidates can apply who:",
+        "candidates can apply who",
+        "candidates can apply who:",
+    }
+
+
 def title_case_role(text: str) -> str:
     return _title_case_role(text)
 
@@ -542,6 +767,10 @@ def _clean_role_title(value: str, full_text: str) -> str:
     cleaned = cleaned.strip(" -•\t:,.")
 
     invalid_phrases = (
+        "passionate intern",
+        "talented intern",
+        "passionate individual",
+        "talented individual",
         "deployment experience",
         "the internship",
         "about the internship",
@@ -578,6 +807,11 @@ def _fallback_role_title(text: str) -> str:
     for pattern, title in fallback_patterns:
         if re.search(pattern, text, flags=re.IGNORECASE):
             return title
+    if (
+        re.search(r"\bweb applications?\b", text, flags=re.IGNORECASE)
+        and re.search(r"\b(node\.?js|express|javascript|react|next\.?js)\b", text, flags=re.IGNORECASE)
+    ):
+        return "Web Development Intern"
     if re.search(r"\bintern(?:ship)?\b", text, flags=re.IGNORECASE):
         return "Intern"
     return ""
