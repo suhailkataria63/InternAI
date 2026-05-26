@@ -543,7 +543,7 @@ Processing: the agent first creates a complete rule-based plan by reading `missi
 
 LLM behavior: the prompt is grounded with target role, company, required skills, matched skills, missing skills, current projects, education, and the rule-based roadmap baseline. The model must return strict JSON only. For four or more missing skills, the LLM roadmap is expected to contain a practical 4-6 week grouped plan rather than one repetitive week per skill. InternAI validates the JSON shape, rejects unrelated invented skills, and repairs otherwise valid but too-short roadmaps into grouped weeks before accepting them.
 
-Fallback behavior: if `LLM_PROVIDER=mock`, the provider key is missing, the provider request fails, the LLM returns invalid JSON, or validation fails, InternAI returns the rule-based skill gap plan. The skill gap response never exposes `Mock LLM response...` to users.
+Fallback behavior: if `LLM_PROVIDER=mock`, the provider key is missing, the provider request fails, the LLM returns invalid JSON, or validation fails, InternAI returns the rule-based skill gap plan. When fallback happens, the response can include `fallback_reason` and a 500-character `llm_raw_preview` for debugging. The skill gap response never exposes API keys or `Mock LLM response...` as user-facing advice.
 
 Output: `target_role`, `priority_skills`, `learning_roadmap`, `resume_improvement_suggestions`, `recommended_projects`, and `overall_advice`. Backend responses may also include optional generation metadata such as `generation_source`, `llm_provider`, and `used_fallback`.
 

@@ -54,6 +54,7 @@ def analyze_skill_gap(resume_profile: dict, job_profile: dict, match_result: dic
             source="rule_based",
             provider=llm_status.get("provider", "mock"),
             used_fallback=True,
+            fallback_reason="provider_mock",
         )
 
     system_prompt, user_prompt = build_skill_gap_prompt(
@@ -66,30 +67,63 @@ def analyze_skill_gap(resume_profile: dict, job_profile: dict, match_result: dic
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         temperature=0.25,
-        max_tokens=1400,
+        max_tokens=3200,
     )
+    llm_text = llm_result.get("text", "")
 
     if llm_result.get("used_fallback"):
-        return _with_generation_metadata(
+        fallback_result = _with_generation_metadata(
             rule_based_result,
             source="rule_based",
             provider=llm_result.get("provider", llm_status.get("provider", "mock")),
             used_fallback=True,
+            fallback_reason="llm_returned_fallback",
+            llm_raw_preview=_raw_preview(llm_text),
         )
+        _debug_skill_gap_fallback(llm_result, "llm_returned_fallback", llm_text)
+        return fallback_result
 
-    parsed_result = parse_llm_skill_gap_json(llm_result.get("text", ""))
-    parsed_result = repair_short_llm_roadmap(
+    if not str(llm_text or "").strip():
+        fallback_result = _with_generation_metadata(
+            rule_based_result,
+            source="rule_based",
+            provider=llm_result.get("provider", llm_status.get("provider", "mock")),
+            used_fallback=True,
+            fallback_reason="empty_llm_text",
+        )
+        _debug_skill_gap_fallback(llm_result, "empty_llm_text", llm_text)
+        return fallback_result
+
+    parsed_result = parse_llm_skill_gap_json(llm_text)
+    if parsed_result is None:
+        fallback_result = _with_generation_metadata(
+            rule_based_result,
+            source="rule_based",
+            provider=llm_result.get("provider", llm_status.get("provider", "mock")),
+            used_fallback=True,
+            fallback_reason="invalid_json",
+            llm_raw_preview=_raw_preview(llm_text),
+        )
+        _debug_skill_gap_fallback(llm_result, "invalid_json", llm_text)
+        return fallback_result
+
+    parsed_result, repair_note = repair_short_llm_roadmap(
         llm_data=parsed_result,
         missing_skills=_canonical_skill_list(_missing_skill_candidates(match_result)),
         target_role=job_profile.get("role_title") or "the target internship",
     )
-    if not is_valid_llm_skill_gap_result(parsed_result, match_result):
-        return _with_generation_metadata(
+    is_valid, validation_issue = validate_llm_skill_gap_result(parsed_result, match_result)
+    if not is_valid:
+        fallback_result = _with_generation_metadata(
             rule_based_result,
             source="rule_based",
             provider=llm_result.get("provider", llm_status.get("provider", "mock")),
             used_fallback=True,
+            fallback_reason=validation_issue,
+            llm_raw_preview=_raw_preview(llm_text),
         )
+        _debug_skill_gap_fallback(llm_result, validation_issue, llm_text)
+        return fallback_result
 
     enhanced_result = merge_llm_skill_gap_result(rule_based_result, parsed_result)
     return _with_generation_metadata(
@@ -97,6 +131,7 @@ def analyze_skill_gap(resume_profile: dict, job_profile: dict, match_result: dic
         source="llm",
         provider=llm_result.get("provider", llm_status.get("provider", "")),
         used_fallback=False,
+        repair_note=repair_note,
     )
 
 
@@ -234,7 +269,8 @@ def build_skill_gap_prompt(
         "with no markdown and no commentary. Keep tasks practical and beginner-friendly. "
         "Recommend projects that can be completed in 1-2 weeks. The learning_roadmap must be complete: "
         "when there are 4 or more missing skills, return 4 to 6 grouped weeks. Do not return only one week. "
-        "Group related skills together and do not create one repetitive week per skill."
+        "Group related skills together and do not create one repetitive week per skill. Keep every string concise "
+        "so the full JSON object is complete and parseable."
     )
     user_prompt = "\n".join(
         [
@@ -265,24 +301,35 @@ def parse_llm_skill_gap_json(text: str) -> dict | None:
     if not cleaned:
         return None
 
-    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"\s*```$", "", cleaned)
+    cleaned = re.sub(r"```(?:json)?", "", cleaned, flags=re.IGNORECASE)
+    cleaned = cleaned.replace("```", "").strip()
 
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        cleaned = cleaned[start : end + 1]
+    parsed = _try_json_loads(cleaned)
+    if isinstance(parsed, dict):
+        return parsed
+    if isinstance(parsed, list):
+        return next((item for item in parsed if isinstance(item, dict)), None)
 
-    try:
-        parsed = json.loads(cleaned)
-    except json.JSONDecodeError:
-        return None
-    return parsed if isinstance(parsed, dict) else None
+    object_candidate = _extract_json_candidate(cleaned, "{", "}")
+    parsed = _try_json_loads(object_candidate)
+    if isinstance(parsed, dict):
+        return parsed
+
+    array_candidate = _extract_json_candidate(cleaned, "[", "]")
+    parsed = _try_json_loads(array_candidate)
+    if isinstance(parsed, list):
+        return next((item for item in parsed if isinstance(item, dict)), None)
+
+    return None
 
 
 def is_valid_llm_skill_gap_result(result: dict | None, match_result: dict) -> bool:
+    return validate_llm_skill_gap_result(result, match_result)[0]
+
+
+def validate_llm_skill_gap_result(result: dict | None, match_result: dict) -> tuple[bool, str | None]:
     if not isinstance(result, dict):
-        return False
+        return False, "schema_error"
 
     required_shapes = {
         "priority_skills": list,
@@ -293,45 +340,36 @@ def is_valid_llm_skill_gap_result(result: dict | None, match_result: dict) -> bo
     }
     for key, expected_type in required_shapes.items():
         if not isinstance(result.get(key), expected_type):
-            return False
+            return False, "schema_error"
 
     allowed_skills = {
         normalize_skill(skill) for skill in _missing_skill_candidates(match_result)
     }
     if not allowed_skills:
-        return True
+        return True, None
     if not result.get("priority_skills") or not result.get("learning_roadmap"):
-        return False
+        return False, "validation_failed"
     if len(allowed_skills) >= 4 and len(result.get("learning_roadmap", [])) < 3:
-        return False
+        return False, "roadmap_too_short_repair_failed"
 
     for item in result.get("priority_skills", []):
         if not isinstance(item, dict):
-            return False
-        skill = normalize_skill(item.get("skill"))
-        if skill and skill not in allowed_skills:
-            return False
+            return False, "schema_error"
 
-    roadmap_skills = []
     for week in result.get("learning_roadmap", []):
         if not isinstance(week, dict):
-            return False
-        roadmap_skills.extend(week.get("skills", []) or [])
-    for skill in roadmap_skills:
-        normalized_skill = normalize_skill(skill)
-        if normalized_skill and normalized_skill not in allowed_skills:
-            return False
+            return False, "schema_error"
 
-    return True
+    return True, None
 
 
 def repair_short_llm_roadmap(
     llm_data: dict | None,
     missing_skills: list,
     target_role: str,
-) -> dict | None:
+) -> tuple[dict | None, str | None]:
     if not isinstance(llm_data, dict):
-        return None
+        return None, None
 
     required_shapes = {
         "priority_skills": list,
@@ -342,18 +380,18 @@ def repair_short_llm_roadmap(
     }
     for key, expected_type in required_shapes.items():
         if not isinstance(llm_data.get(key), expected_type):
-            return llm_data
+            return llm_data, None
 
     canonical_missing_skills = _canonical_skill_list(missing_skills)
     if len(canonical_missing_skills) < 4 or len(llm_data.get("learning_roadmap", [])) >= 3:
-        return llm_data
+        return llm_data, None
 
     repaired_data = dict(llm_data)
     repaired_data["learning_roadmap"] = generate_grouped_learning_roadmap(
         canonical_missing_skills,
         target_role,
     )
-    return repaired_data
+    return repaired_data, "roadmap_repaired"
 
 
 def merge_llm_skill_gap_result(rule_based_result: dict, llm_result: dict) -> dict:
@@ -733,13 +771,57 @@ def _with_generation_metadata(
     source: str,
     provider: str,
     used_fallback: bool,
+    fallback_reason: str | None = None,
+    llm_raw_preview: str | None = None,
+    repair_note: str | None = None,
 ) -> dict:
     return {
         **result,
         "generation_source": source,
         "llm_provider": provider,
         "used_fallback": used_fallback,
+        "fallback_reason": fallback_reason,
+        "llm_raw_preview": llm_raw_preview,
+        "repair_note": repair_note,
     }
+
+
+def _debug_skill_gap_fallback(llm_result: dict, fallback_reason: str | None, llm_text: str) -> None:
+    provider = llm_result.get("provider", "unknown")
+    if provider != "gemini":
+        return
+    print(
+        "[SkillGapAgent] LLM fallback",
+        {
+            "provider": provider,
+            "model": llm_result.get("model", ""),
+            "fallback_reason": fallback_reason or "unknown_error",
+            "llm_raw_preview": _raw_preview(llm_text),
+        },
+    )
+
+
+def _raw_preview(text: str | None) -> str | None:
+    if not text:
+        return None
+    return str(text).replace("\n", " ").strip()[:500]
+
+
+def _try_json_loads(text: str | None):
+    if not text:
+        return None
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return None
+
+
+def _extract_json_candidate(text: str, start_char: str, end_char: str) -> str:
+    start = text.find(start_char)
+    end = text.rfind(end_char)
+    if start != -1 and end != -1 and end > start:
+        return text[start : end + 1]
+    return ""
 
 
 def _canonical_skill_list(skills: list) -> list[str]:

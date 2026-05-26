@@ -272,7 +272,10 @@ Output:
   "overall_advice": "",
   "generation_source": "rule_based",
   "llm_provider": "mock",
-  "used_fallback": true
+  "used_fallback": true,
+  "fallback_reason": "provider_mock",
+  "llm_raw_preview": null,
+  "repair_note": null
 }
 ```
 
@@ -286,6 +289,7 @@ Internal logic:
 - Parses markdown-fenced JSON safely and never crashes the orchestrator on invalid JSON.
 - Validates that required JSON fields exist, the roadmap is complete enough for the number of gaps, and priority/roadmap skills stay grounded in missing skills from the match result.
 - Repairs otherwise valid but too-short LLM roadmaps by grouping related skills such as `Node.js` + `Express.js`, `REST API` + `Debugging`, frontend structure skills, and project-polish skills.
+- Returns debug metadata such as `fallback_reason`, `llm_raw_preview`, and `repair_note` so provider issues can be diagnosed without exposing API keys.
 - Falls back to the rule-based plan whenever mock mode is active, provider keys are missing, provider requests fail, JSON parsing fails, or validation fails.
 - Reads `missing_skills` from the Match Scoring Agent output.
 - Compares each missing skill against `job_profile.required_skills` and `job_profile.preferred_skills`.

@@ -158,11 +158,25 @@ class LLMService:
                 },
                 timeout=30,
             )
-            response.raise_for_status()
+            if response.status_code >= 400:
+                return self._fallback_response(
+                    GEMINI_FALLBACK_TEXT,
+                    error={
+                        "status_code": response.status_code,
+                        "message": self._sanitize_error_message(response.text),
+                    },
+                )
+
             payload = response.json()
             text = self._extract_gemini_text(payload)
             if not text:
-                return self._fallback_response(GEMINI_FALLBACK_TEXT)
+                return self._fallback_response(
+                    GEMINI_FALLBACK_TEXT,
+                    error={
+                        "type": "EmptyResponse",
+                        "message": "Gemini returned a successful response without text content.",
+                    },
+                )
 
             return {
                 "provider": "gemini",
@@ -170,8 +184,14 @@ class LLMService:
                 "text": text,
                 "used_fallback": False,
             }
-        except Exception:
-            return self._fallback_response(GEMINI_FALLBACK_TEXT)
+        except Exception as exc:
+            return self._fallback_response(
+                GEMINI_FALLBACK_TEXT,
+                error={
+                    "type": type(exc).__name__,
+                    "message": self._sanitize_error_message(str(exc)),
+                },
+            )
 
     def _build_prompt(self, system_prompt: str, user_prompt: str) -> str:
         system_text = (system_prompt or "").strip()
@@ -198,10 +218,27 @@ class LLMService:
         ]
         return "\n".join(text_parts).strip()
 
-    def _fallback_response(self, text: str = MOCK_LLM_TEXT) -> dict:
-        return {
+    def _fallback_response(self, text: str = MOCK_LLM_TEXT, error: dict | None = None) -> dict:
+        response = {
             "provider": self.provider or "mock",
             "model": self.model or "mock-model",
             "text": text,
             "used_fallback": True,
         }
+        if error:
+            response["error"] = error
+        return response
+
+    def _sanitize_error_message(self, message: str) -> str:
+        safe_message = str(message or "")
+        secrets = [
+            settings.gemini_api_key,
+            settings.groq_api_key,
+            settings.openai_api_key,
+        ]
+        for secret in secrets:
+            if secret:
+                safe_message = safe_message.replace(secret, "[REDACTED]")
+        safe_message = safe_message.replace("\n", " ").replace("\r", " ").strip()
+        safe_message = " ".join(safe_message.split())
+        return safe_message[:500]
