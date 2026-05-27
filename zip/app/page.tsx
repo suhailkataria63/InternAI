@@ -2,7 +2,6 @@
 
 import { ChangeEvent, useMemo, useState } from "react";
 import ApplicationTracker from "../components/ApplicationTracker";
-import WelcomeIntro from "../components/WelcomeIntro";
 import {
   analyzeApplication,
   saveApplicationAnalysis,
@@ -102,7 +101,6 @@ export default function Home() {
   const [hasSavedCurrentResult, setHasSavedCurrentResult] = useState(false);
   const [savedApplicationId, setSavedApplicationId] = useState<number | null>(null);
   const [copiedTarget, setCopiedTarget] = useState<"answer" | "cover" | "">("");
-  const [showIntro, setShowIntro] = useState(true);
 
   const matchedRequired =
     result?.match_result?.matched_required_skills?.length
@@ -318,10 +316,7 @@ export default function Home() {
   };
 
   return (
-    <>
-      {showIntro ? <WelcomeIntro onComplete={() => setShowIntro(false)} /> : null}
-      {!showIntro ? (
-      <main className="page-shell">
+    <main className="page-shell">
       <div className="background-grid" aria-hidden="true" />
       <div className="background-glow glow-1" aria-hidden="true" />
       <div className="background-glow glow-2" aria-hidden="true" />
@@ -768,8 +763,6 @@ export default function Home() {
           />
         </section>
       </section>
-      </main>
-      ) : null}
-    </>
+    </main>
   );
 }
