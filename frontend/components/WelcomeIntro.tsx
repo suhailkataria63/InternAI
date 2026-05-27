@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type WelcomeIntroProps = {
   onComplete?: () => void;
@@ -8,16 +8,26 @@ type WelcomeIntroProps = {
 
 export default function WelcomeIntro({ onComplete }: WelcomeIntroProps) {
   const [isLeaving, setIsLeaving] = useState(false);
+  const hasCompletedRef = useRef(false);
+
+  const completeIntro = useCallback(() => {
+    if (hasCompletedRef.current) {
+      return;
+    }
+
+    hasCompletedRef.current = true;
+    onComplete?.();
+  }, [onComplete]);
 
   useEffect(() => {
-    const leaveTimer = window.setTimeout(() => setIsLeaving(true), 2600);
-    const completeTimer = window.setTimeout(() => onComplete?.(), 3350);
+    const leaveTimer = window.setTimeout(() => setIsLeaving(true), 4200);
+    const completeTimer = window.setTimeout(() => completeIntro(), 5000);
 
     return () => {
       window.clearTimeout(leaveTimer);
       window.clearTimeout(completeTimer);
     };
-  }, [onComplete]);
+  }, [completeIntro]);
 
   return (
     <div
@@ -43,6 +53,14 @@ export default function WelcomeIntro({ onComplete }: WelcomeIntroProps) {
         <div className="intro-loader" aria-hidden="true">
           <span />
         </div>
+
+        <button
+          type="button"
+          className="intro-skip"
+          onClick={completeIntro}
+        >
+          Skip intro
+        </button>
       </div>
     </div>
   );
