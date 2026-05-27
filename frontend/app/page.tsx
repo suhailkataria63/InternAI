@@ -55,6 +55,10 @@ function getStringArray(source: unknown, key?: string): string[] {
     .filter(Boolean);
 }
 
+function getStringValue(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function getArrayLength(source: unknown, key: string): number {
   if (!source || typeof source !== "object") {
     return 0;
@@ -64,9 +68,9 @@ function getArrayLength(source: unknown, key: string): number {
 }
 
 function readablePrioritySkills(result: AnalysisResponse | null): string[] {
-  const summarySkills = result?.pipeline_summary.highest_priority_skills || [];
+  const summarySkills = result?.pipeline_summary?.highest_priority_skills || [];
   const gapSkills =
-    result?.skill_gap_result.priority_skills
+    result?.skill_gap_result?.priority_skills
       ?.map((item) => item.skill)
       .filter(Boolean) || [];
 
@@ -98,31 +102,55 @@ export default function Home() {
   const [copiedTarget, setCopiedTarget] = useState<"answer" | "cover" | "">("");
 
   const matchedRequired =
-    result?.match_result.matched_required_skills?.length
+    result?.match_result?.matched_required_skills?.length
       ? result.match_result.matched_required_skills
-      : result?.match_result.matched_skills || [];
-  const missingRequired = result?.match_result.missing_required_skills || [];
+      : result?.match_result?.matched_skills || [];
+  const missingRequired = result?.match_result?.missing_required_skills || [];
   const requiredSkills = getStringArray(result?.job_profile, "required_skills");
   const skillCoverageTotal =
     requiredSkills.length || matchedRequired.length + missingRequired.length;
-  const roadmap = result?.skill_gap_result.learning_roadmap || [];
+  const roadmap = result?.skill_gap_result?.learning_roadmap || [];
   const matchedSkills = matchedRequired.length
     ? matchedRequired
-    : result?.match_result.matched_skills || [];
+    : result?.match_result?.matched_skills || [];
   const missingSkills = missingRequired.length
     ? missingRequired
-    : result?.match_result.missing_skills || [];
-  const coverLetter = result?.cover_letter.cover_letter || "";
-  const applicationAnswer = result?.application_answer.generated_answer || "";
+    : result?.match_result?.missing_skills || [];
+  const coverLetter = result?.cover_letter?.cover_letter || "";
+  const applicationAnswer = result?.application_answer?.generated_answer || "";
   const prioritySkills = readablePrioritySkills(result);
+  const candidateName =
+    getStringValue(result?.pipeline_summary?.candidate_name) ||
+    getStringValue(result?.resume_profile?.name) ||
+    "Candidate name not detected";
+  const rawTargetRole =
+    getStringValue(result?.pipeline_summary?.target_role) ||
+    getStringValue(result?.job_profile?.role_title);
+  const targetRole = rawTargetRole || "Target role not detected";
+  const rawCompanyName =
+    getStringValue(result?.pipeline_summary?.company_name) ||
+    getStringValue(result?.job_profile?.company_name);
+  const companyName = rawCompanyName || "Company not detected";
+  const roleCompanyLine = rawTargetRole
+    ? rawCompanyName
+      ? `${rawTargetRole} at ${rawCompanyName}`
+      : rawTargetRole
+    : "Target role not detected";
+  const matchScore =
+    result?.pipeline_summary?.match_score ??
+    result?.match_result?.match_score;
+  const matchLevel =
+    result?.pipeline_summary?.match_level ||
+    result?.match_result?.match_level ||
+    "Not available";
 
   const stats = useMemo(
     () => [
       {
         label: "Match Score",
         value:
-          typeof result?.match_result.match_score === "number"
-            ? `${result.match_result.match_score}/100`
+          typeof matchScore === "number"
+            ? `${matchScore}/100`
             : "--",
       },
       {
@@ -138,7 +166,7 @@ export default function Home() {
         value: String(roadmap.length),
       },
     ],
-    [matchedRequired.length, roadmap.length, result, skillCoverageTotal],
+    [matchedRequired.length, matchScore, roadmap.length, result, skillCoverageTotal],
   );
 
   const handleResumeUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -278,7 +306,7 @@ export default function Home() {
 
       <aside className="sidebar glass">
         <div className="brand">
-          <div className="brand-badge">IA</div>
+          <div className="brand-badge">I.AI</div>
           <div>
             <h1>InternAI</h1>
             <p>AI Internship Copilot</p>
@@ -287,7 +315,7 @@ export default function Home() {
 
         <div className="glass section-card floating">
           <span className="eyebrow">Resume Upload</span>
-          <h2>Launch your analysis</h2>
+          <h2>Load Your Resume</h2>
 
           <label className="upload-box">
             <input
@@ -407,7 +435,7 @@ export default function Home() {
               onClick={() => copyText("answer", applicationAnswer)}
               disabled={!applicationAnswer}
             >
-              Copy Answer
+              Copy Application
             </button>
             <button
               className="glass mini-card"
@@ -429,13 +457,13 @@ export default function Home() {
             </span>
 
             <h2>
-              Production-grade internship workflow with real InternAI analysis
+              Tailored insights to land your next internship
             </h2>
 
             <p>
               Upload a resume, paste a job description, run the FastAPI
               orchestrator, review dynamic recommendations, copy generated
-              writing, and save applications into the SQLite tracker.
+              cover letters, and save applications into the SQLite tracker.
             </p>
 
             <div className="hero-actions">
@@ -457,14 +485,45 @@ export default function Home() {
             <div className="orb-ring" />
             <div className="orb-core">
               <span>
-                {typeof result?.match_result.match_score === "number"
-                  ? `${result.match_result.match_score}%`
+                {typeof matchScore === "number"
+                  ? `${matchScore}%`
                   : "--"}
               </span>
-              <p>{result?.match_result.match_level || "Awaiting analysis"}</p>
+              <p>{result ? matchLevel : "Waiting..."}</p>
             </div>
           </div>
         </div>
+
+        <section className="glass profile-summary-card">
+          <div className="profile-main">
+            <span className="eyebrow">Candidate Profile</span>
+            <h3>{result ? candidateName : "Run an analysis to detect the candidate"}</h3>
+            <p>{result ? roleCompanyLine : "Candidate, role, and company details will appear here."}</p>
+          </div>
+
+          <div className="profile-facts">
+            <div>
+              <span>Candidate</span>
+              <strong>{result ? candidateName : "Not analyzed"}</strong>
+            </div>
+            <div>
+              <span>Target Role</span>
+              <strong>{result ? targetRole : "Not analyzed"}</strong>
+            </div>
+            <div>
+              <span>Company</span>
+              <strong>{result ? companyName : "Not analyzed"}</strong>
+            </div>
+            <div>
+              <span>Match Score</span>
+              <strong>{typeof matchScore === "number" ? `${matchScore}/100` : "--"}</strong>
+            </div>
+            <div>
+              <span>Match Level</span>
+              <strong>{result ? matchLevel : "--"}</strong>
+            </div>
+          </div>
+        </section>
 
         <div className="stats-grid">
           {stats.map((item) => (
@@ -520,7 +579,7 @@ export default function Home() {
             </div>
           </div>
 
-          {result?.match_result.score_breakdown ? (
+          {result?.match_result?.score_breakdown ? (
             <div className="score-breakdown-grid">
               {[
                 ["Required", result.match_result.score_breakdown.required_skills],

@@ -185,7 +185,7 @@ button {
   flex-direction: column;
   gap: 22px;
   max-height: none;
-  overflow: visible;
+  overflow: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,.24) transparent;
 }
@@ -539,8 +539,11 @@ button {
   width: 178px;
   height: 178px;
   border-radius: 999px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .35rem;
   text-align: center;
   background:
     radial-gradient(circle at 30% 18%, rgba(255,255,255,.65), transparent 18%),
@@ -552,18 +555,78 @@ button {
 .orb-core span {
   display: block;
   font-size: 3rem;
+  line-height: 1;
   font-weight: 900;
 }
 
 .orb-core p {
-  margin-top: 0;
+  margin: 0;
   color: rgba(255,255,255,.8);
+  line-height: 1.2;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0,1fr));
   gap: 18px;
+}
+
+.profile-summary-card {
+  border-radius: 32px;
+  padding: 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.profile-main h3 {
+  margin-top: 12px;
+  font-size: clamp(1.55rem, 3vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  font-weight: 900;
+}
+
+.profile-main p {
+  margin-top: 10px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.profile-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profile-facts div {
+  min-width: 0;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.07);
+  padding: 16px;
+  backdrop-filter: blur(18px);
+}
+
+.profile-facts span {
+  display: block;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.profile-facts strong {
+  display: block;
+  margin-top: 9px;
+  color: #f8fafc;
+  font-size: .95rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .stat-card {
@@ -965,6 +1028,14 @@ button {
     grid-template-columns: repeat(2,1fr);
   }
 
+  .profile-summary-card {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .roadmap-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -981,6 +1052,7 @@ button {
   }
 
   .stats-grid,
+  .profile-facts,
   .skill-intelligence-grid,
   .generated-content-grid,
   .roadmap-grid,
