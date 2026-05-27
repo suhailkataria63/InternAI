@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     project_name: str = "InternAI"
     environment: str = Field(default="development", alias="ENVIRONMENT")
     database_url: str = Field(default="sqlite:///./internai.db", alias="DATABASE_URL")
+    frontend_url: Optional[str] = Field(default=None, alias="FRONTEND_URL")
     llm_provider: str = Field(default="mock", alias="LLM_PROVIDER")
     llm_model: str = Field(default="mock-model", alias="LLM_MODEL")
     groq_api_key: Optional[str] = Field(default=None, alias="GROQ_API_KEY")
@@ -23,7 +24,15 @@ class Settings(BaseSettings):
     cors_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://intern-0aruas79l-suhailkataria63s-projects.vercel.app",
     ]
+
+    @property
+    def allowed_cors_origins(self) -> list[str]:
+        origins = [origin.strip() for origin in self.cors_origins if origin.strip()]
+        if self.frontend_url and self.frontend_url.strip():
+            origins.append(self.frontend_url.strip())
+        return list(dict.fromkeys(origins))
 
     model_config = SettingsConfigDict(
         env_file=".env",
