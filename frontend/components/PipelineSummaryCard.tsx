@@ -5,12 +5,24 @@ type PipelineSummaryCardProps = {
 };
 
 export default function PipelineSummaryCard({ summary }: PipelineSummaryCardProps) {
+  const candidateName = summary.candidate_name || "Candidate name not detected";
+  const targetRole = summary.target_role || "Target role not detected";
+  const companyName = summary.company_name || "Company not detected";
+  const roleLine =
+    targetRole === "Target role not detected"
+      ? targetRole
+      : summary.company_name
+        ? `${targetRole} at ${companyName}`
+        : targetRole;
+  const matchScore =
+    typeof summary.match_score === "number" ? `${summary.match_score}/100` : "Not scored";
+  const matchLevel = summary.match_level || "Not available";
   const facts = [
-    ["Candidate", summary.candidate_name || "Unknown"],
-    ["Target role", summary.target_role || "Not detected"],
-    ["Company", summary.company_name || "Not detected"],
-    ["Match score", summary.match_score != null ? `${summary.match_score}/100` : "Not scored"],
-    ["Match level", summary.match_level || "Pending"],
+    ["Candidate", candidateName],
+    ["Target role", targetRole],
+    ["Company", companyName],
+    ["Match score", matchScore],
+    ["Match level", matchLevel],
   ];
 
   return (
@@ -20,12 +32,13 @@ export default function PipelineSummaryCard({ summary }: PipelineSummaryCardProp
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
             Pipeline Summary
           </p>
-          <h3 className="mt-1 text-lg font-black text-slate-950">
-            Internship match report
+          <h3 className="mt-1 text-2xl font-black text-slate-950">
+            {candidateName}
           </h3>
+          <p className="mt-1 text-sm font-semibold text-slate-600">{roleLine}</p>
         </div>
         <span className="rounded-full bg-slate-950 shadow-sm px-3 py-1 text-xs font-semibold text-white">
-          {summary.match_level || "Pending"}
+          {matchLevel}
         </span>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

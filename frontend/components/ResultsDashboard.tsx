@@ -162,13 +162,40 @@ export default function ResultsDashboard({ result, onSaved }: ResultsDashboardPr
     : hasSaved
       ? "Application saved successfully"
       : "Save Application";
+  const candidateName =
+    result.pipeline_summary?.candidate_name ||
+    result.resume_profile?.name ||
+    "Candidate name not detected";
+  const targetRole =
+    result.pipeline_summary?.target_role ||
+    result.job_profile?.role_title ||
+    "Target role not detected";
+  const companyName =
+    result.pipeline_summary?.company_name ||
+    result.job_profile?.company_name ||
+    "Company not detected";
+  const matchScore =
+    result.pipeline_summary?.match_score ??
+    result.match_result?.match_score;
+  const matchLevel =
+    result.pipeline_summary?.match_level ||
+    result.match_result?.match_level ||
+    "Not available";
+  const hydratedSummary = {
+    ...(result.pipeline_summary || {}),
+    candidate_name: candidateName,
+    target_role: targetRole,
+    company_name: companyName,
+    match_score: matchScore,
+    match_level: matchLevel,
+  };
 
   return (
     <div className="space-y-5">
-      <PipelineSummaryCard summary={result.pipeline_summary || {}} />
+      <PipelineSummaryCard summary={hydratedSummary} />
       <MatchScoreCard
         match={result.match_result || {}}
-        summary={result.pipeline_summary || {}}
+        summary={hydratedSummary}
       />
       <ScoreBreakdown match={result.match_result || {}} />
       <SkillsOverview match={result.match_result || {}} />

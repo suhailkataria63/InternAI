@@ -30,6 +30,28 @@ export type PipelineSummary = {
   recommended_next_step?: string;
 };
 
+export type ResumeProfile = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  education?: string[];
+  skills?: string[];
+  projects?: any[];
+  [key: string]: unknown;
+};
+
+export type JobProfile = {
+  role_title?: string;
+  company_name?: string;
+  required_skills?: string[];
+  preferred_skills?: string[];
+  work_mode?: string;
+  stipend?: string;
+  duration?: string;
+  location?: string;
+  [key: string]: unknown;
+};
+
 export type MatchResult = {
   match_score?: number;
   match_level?: string;
@@ -106,13 +128,13 @@ export type CoverLetterResult = {
 };
 
 export type AnalysisResponse = {
-  resume_profile: Record<string, unknown>;
-  job_profile: Record<string, unknown>;
-  match_result: MatchResult;
-  skill_gap_result: SkillGapResult;
-  application_answer: ApplicationAnswer;
-  cover_letter: CoverLetterResult;
-  pipeline_summary: PipelineSummary;
+  resume_profile?: ResumeProfile;
+  job_profile?: JobProfile;
+  match_result?: MatchResult;
+  skill_gap_result?: SkillGapResult;
+  application_answer?: ApplicationAnswer;
+  cover_letter?: CoverLetterResult;
+  pipeline_summary?: PipelineSummary;
 };
 
 export type ApplicationStatus =
