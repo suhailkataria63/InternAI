@@ -26,6 +26,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "https://intern-0aruas79l-suhailkataria63s-projects.vercel.app",
         "https://intern-3tuycqr4-suhailkataria63s-projects.vercel.app",
+        "https://intern-ai-seven.vercel.app",
     ]
 
     @property
