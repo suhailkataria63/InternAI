@@ -25,13 +25,18 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://intern-0aruas79l-suhailkataria63s-projects.vercel.app",
+        "https://intern-3tuycqr4-suhailkataria63s-projects.vercel.app",
     ]
 
     @property
     def allowed_cors_origins(self) -> list[str]:
-        origins = [origin.strip() for origin in self.cors_origins if origin.strip()]
+        origins = [
+            origin.strip().rstrip("/")
+            for origin in self.cors_origins
+            if origin and origin.strip()
+        ]
         if self.frontend_url and self.frontend_url.strip():
-            origins.append(self.frontend_url.strip())
+            origins.append(self.frontend_url.strip().rstrip("/"))
         return list(dict.fromkeys(origins))
 
     model_config = SettingsConfigDict(
