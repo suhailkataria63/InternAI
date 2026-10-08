@@ -63,6 +63,14 @@ class LLMService:
                 max_tokens=active_max_tokens,
             )
 
+        if self.provider in {"openai", "openai-compatible"} and settings.openai_api_key:
+            return self._generate_with_openai_compatible(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=active_temperature,
+                max_tokens=active_max_tokens,
+            )
+
         return self._fallback_response()
 
     def _has_required_key(self) -> bool:
@@ -187,6 +195,71 @@ class LLMService:
         except Exception as exc:
             return self._fallback_response(
                 GEMINI_FALLBACK_TEXT,
+                error={
+                    "type": type(exc).__name__,
+                    "message": self._sanitize_error_message(str(exc)),
+                },
+            )
+
+    def _generate_with_openai_compatible(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> dict:
+        try:
+            import httpx
+
+            base_url = (settings.openai_base_url or "https://api.openai.com/v1").rstrip("/")
+            response = httpx.post(
+                f"{base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.openai_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                },
+                timeout=30,
+            )
+            if response.status_code >= 400:
+                return self._fallback_response(
+                    error={
+                        "status_code": response.status_code,
+                        "message": self._sanitize_error_message(response.text),
+                    },
+                )
+
+            payload = response.json()
+            text = (
+                payload.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+                .strip()
+            )
+            if not text:
+                return self._fallback_response(
+                    error={
+                        "type": "EmptyResponse",
+                        "message": "OpenAI-compatible provider returned no text content.",
+                    },
+                )
+
+            return {
+                "provider": self.provider,
+                "model": self.model,
+                "text": text,
+                "used_fallback": False,
+            }
+        except Exception as exc:
+            return self._fallback_response(
                 error={
                     "type": type(exc).__name__,
                     "message": self._sanitize_error_message(str(exc)),
