@@ -29,7 +29,8 @@ Rules:
 - Start the cover letter with "Dear Hiring Team,"
 - Mention missing skills only as learning goals, not as skills already mastered.
 - Avoid fake claims, inflated experience, or invented metrics.
-- Keep short letters around 120-180 words and medium letters around 180-260 words.
+- Keep short letters around 120-180 words, medium letters around 180-260 words,
+  and long letters around 260-360 words.
 - Match the requested tone.
 """
 
@@ -208,7 +209,13 @@ def is_valid_llm_cover_letter(text: str, length: str) -> bool:
     if any(phrase in lowered for phrase in blocked_phrases):
         return False
 
-    max_words = 360 if normalize_text(length).lower() == "medium" else 260
+    normalized_length = normalize_text(length).lower()
+    if normalized_length == "long":
+        max_words = 430
+    elif normalized_length == "medium":
+        max_words = 360
+    else:
+        max_words = 260
     return count_words(text) <= max_words
 
 
@@ -227,7 +234,10 @@ def _with_generation_metadata(
 
 
 def _llm_max_tokens_for_length(length: str) -> int:
-    return 750 if normalize_text(length).lower() == "medium" else 550
+    normalized_length = normalize_text(length).lower()
+    if normalized_length == "long":
+        return 1000
+    return 750 if normalized_length == "medium" else 550
 
 
 def _string_list(value) -> list[str]:
@@ -474,10 +484,16 @@ def _build_cover_letter(
         _growth_paragraph(learning_focus, role_phrase),
     ]
 
-    if normalize_text(length).lower() == "medium":
+    normalized_length = normalize_text(length).lower()
+    if normalized_length in {"medium", "long"}:
         paragraphs.insert(
             3,
             _medium_detail_paragraph(job_profile, match_result),
+        )
+    if normalized_length == "long":
+        paragraphs.insert(
+            4,
+            _long_detail_paragraph(resume_profile, job_profile, skill_gap_result),
         )
 
     paragraphs.append("Thank you for your consideration.\n\nSincerely,\n" + extract_candidate_name(resume_profile))
@@ -548,6 +564,33 @@ def _medium_detail_paragraph(job_profile: dict, match_result: dict) -> str:
     return ""
 
 
+def _long_detail_paragraph(
+    resume_profile: dict,
+    job_profile: dict,
+    skill_gap_result: dict,
+) -> str:
+    role_title = _safe_role_title(job_profile.get("role_title"), "this internship")
+    suggestions = [
+        normalize_text(item)
+        for item in (skill_gap_result.get("resume_improvement_suggestions", []) or [])[:2]
+        if normalize_text(item)
+    ]
+    projects = extract_project_highlights(resume_profile, limit=1)
+
+    sentences = [
+        f"I would approach {role_title} with a balance of hands-on contribution and deliberate learning."
+    ]
+    if projects:
+        sentences.append(
+            "My project work gives me a base for translating technical concepts into working features."
+        )
+    if suggestions:
+        sentences.append(
+            "I am also actively improving my profile by focusing on " + " ".join(suggestions)
+        )
+    return " ".join(sentences)
+
+
 def _build_opening_summary(resume_profile: dict, job_profile: dict) -> str:
     role_title = _safe_role_title(job_profile.get("role_title"), "the internship role")
     education = extract_education(resume_profile)
@@ -564,7 +607,13 @@ def _learning_focus(match_result: dict, skill_gap_result: dict) -> list:
 
 
 def _fit_length(text: str, length: str) -> str:
-    target_max = 260 if normalize_text(length).lower() == "medium" else 180
+    normalized_length = normalize_text(length).lower()
+    if normalized_length == "long":
+        target_max = 360
+    elif normalized_length == "medium":
+        target_max = 260
+    else:
+        target_max = 180
     if count_words(text) <= target_max:
         return text
 

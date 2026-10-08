@@ -7,7 +7,10 @@ import type {
   ResumeUploadResponse,
 } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+).replace(/\/+$/, "");
+const REQUEST_TIMEOUT_MS = 60_000;
 
 export async function analyzeApplication(
   payload: AnalysisRequest,
@@ -24,11 +27,18 @@ export async function uploadResumePdf(file: File): Promise<ResumeUploadResponse>
 
   let response: Response;
   try {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     response = await fetch(`${API_BASE_URL}/api/resume/upload`, {
       method: "POST",
       body: formData,
+      signal: controller.signal,
     });
-  } catch {
+    window.clearTimeout(timeoutId);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Resume upload timed out. Try a smaller PDF or paste the resume text manually.");
+    }
     throw new Error(
       `Could not reach the InternAI backend at ${API_BASE_URL}. Make sure FastAPI is running before uploading a resume.`,
     );
@@ -38,11 +48,7 @@ export async function uploadResumePdf(file: File): Promise<ResumeUploadResponse>
     let message = "Failed to extract resume text. Please paste resume text manually.";
     try {
       const body = await response.json();
-      if (typeof body.detail === "string") {
-        message = body.detail;
-      } else if (body.detail?.message) {
-        message = body.detail.message;
-      }
+      message = extractErrorMessage(body, message);
     } catch {
       // Keep the upload-specific fallback message when the backend does not return JSON.
     }
@@ -102,14 +108,21 @@ async function requestJson<T>(
   let response: Response;
 
   try {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...init.headers,
       },
     });
-  } catch {
+    window.clearTimeout(timeoutId);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("The InternAI backend took too long to respond. Please try again with shorter input.");
+    }
     throw new Error(
       `Could not reach the InternAI backend at ${API_BASE_URL}. Make sure FastAPI is running.`,
     );
@@ -119,11 +132,7 @@ async function requestJson<T>(
     let message = `Request failed with status ${response.status}.`;
     try {
       const body = await response.json();
-      if (typeof body.detail === "string") {
-        message = body.detail;
-      } else if (body.detail?.message) {
-        message = body.detail.message;
-      }
+      message = extractErrorMessage(body, message);
     } catch {
       // Keep the default message when the backend does not return JSON.
     }
@@ -135,4 +144,36 @@ async function requestJson<T>(
   }
 
   return response.json() as Promise<T>;
+}
+
+function extractErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== "object") {
+    return fallback;
+  }
+
+  const detail = (body as { detail?: unknown }).detail;
+  if (typeof detail === "string") {
+    return detail;
+  }
+  if (detail && typeof detail === "object" && "message" in detail) {
+    const message = (detail as { message?: unknown }).message;
+    return typeof message === "string" ? message : fallback;
+  }
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (!item || typeof item !== "object") return "";
+        const message = (item as { msg?: unknown }).msg;
+        const location = (item as { loc?: unknown }).loc;
+        const field = Array.isArray(location) ? location.slice(1).join(".") : "";
+        if (typeof message !== "string") return "";
+        return field ? `${field}: ${message}` : message;
+      })
+      .filter(Boolean);
+    if (messages.length) {
+      return messages.join(" ");
+    }
+  }
+
+  return fallback;
 }

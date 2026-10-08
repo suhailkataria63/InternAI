@@ -19,8 +19,15 @@ class Settings(BaseSettings):
     groq_api_key: Optional[str] = Field(default=None, alias="GROQ_API_KEY")
     gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
     openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
+    openai_base_url: str = Field(
+        default="https://api.openai.com/v1",
+        alias="OPENAI_BASE_URL",
+    )
     llm_temperature: float = Field(default=0.3, alias="LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=600, alias="LLM_MAX_TOKENS")
+    max_pdf_upload_bytes: int = Field(default=5 * 1024 * 1024, alias="MAX_PDF_UPLOAD_BYTES")
+    max_pdf_pages: int = Field(default=12, alias="MAX_PDF_PAGES")
+    max_text_input_chars: int = Field(default=20_000, alias="MAX_TEXT_INPUT_CHARS")
     cors_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",

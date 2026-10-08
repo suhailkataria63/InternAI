@@ -108,8 +108,12 @@ LLM_MODEL=mock-model
 GROQ_API_KEY=
 GEMINI_API_KEY=
 OPENAI_API_KEY=
+OPENAI_BASE_URL=https://api.openai.com/v1
 LLM_TEMPERATURE=0.3
 LLM_MAX_TOKENS=600
+MAX_PDF_UPLOAD_BYTES=5242880
+MAX_PDF_PAGES=12
+MAX_TEXT_INPUT_CHARS=20000
 ```
 
 To prepare Groq later, set `LLM_PROVIDER=groq`, choose a Groq model in `LLM_MODEL`, and add `GROQ_API_KEY`. If the key is missing or the provider request fails, InternAI returns a mock fallback response instead of crashing.
@@ -123,6 +127,15 @@ GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 If `LLM_PROVIDER=gemini` is set but `GEMINI_API_KEY` is empty, the backend still starts and `POST /api/llm/test` returns a safe fallback response.
+
+To use OpenAI or an OpenAI-compatible provider, set `LLM_PROVIDER=openai` or
+`LLM_PROVIDER=openai-compatible`, choose a chat-completions model in
+`LLM_MODEL`, set `OPENAI_API_KEY`, and optionally set `OPENAI_BASE_URL` for a
+compatible gateway.
+
+Resume uploads are limited by default to 5 MB and 12 pages, and text inputs are
+limited to 20,000 characters so the API fails clearly instead of accepting
+oversized requests.
 
 Check the health endpoint:
 
