@@ -4,10 +4,43 @@ import fitz
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.schemas.application_writer import ApplicationWriterResponse
+from app.schemas.cover_letter import CoverLetterResponse
 from app.services.pdf_service import extract_text_from_pdf
 
 
 client = TestClient(app)
+
+
+def test_writer_responses_keep_existing_fields_and_expose_fallback_reason() -> None:
+    application = ApplicationWriterResponse(
+        question="Why this role?",
+        generated_answer="Verified evidence supports this application.",
+        tone="professional",
+        word_count=6,
+        improvement_note="",
+        generation_source="rule_based",
+        llm_provider="groq",
+        used_fallback=True,
+        fallback_reason="provider_rate_limited",
+    ).model_dump()
+    letter = CoverLetterResponse(
+        cover_letter="Dear Hiring Team, verified project evidence supports this application. Sincerely, Jane",
+        subject_line="Application",
+        opening_summary="Evidence grounded letter",
+        key_points_used=[],
+        tone="professional",
+        word_count=12,
+        generation_source="rule_based",
+        llm_provider="groq",
+        used_fallback=True,
+        fallback_reason="provider_authentication",
+    ).model_dump()
+
+    assert application["generation_source"] == "rule_based"
+    assert application["fallback_reason"] == "provider_rate_limited"
+    assert letter["llm_provider"] == "groq"
+    assert letter["fallback_reason"] == "provider_authentication"
 
 
 def test_orchestrator_rejects_oversized_text() -> None:
@@ -61,8 +94,8 @@ def test_orchestrator_returns_analysis_for_valid_request() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["match_result"]["match_score"] >= 0
-    assert payload["application_answer"]["generated_answer"]
-    assert payload["cover_letter"]["cover_letter"]
+    assert payload["application_answer"] == {}
+    assert payload["cover_letter"] == {}
     assert payload["pipeline_summary"]["target_role"]
 
 

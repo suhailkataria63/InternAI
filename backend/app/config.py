@@ -17,11 +17,20 @@ class Settings(BaseSettings):
     llm_provider: str = Field(default="mock", alias="LLM_PROVIDER")
     llm_model: str = Field(default="mock-model", alias="LLM_MODEL")
     groq_api_key: Optional[str] = Field(default=None, alias="GROQ_API_KEY")
+    groq_max_retries: int = Field(default=1, alias="GROQ_MAX_RETRIES")
+    groq_evaluation_mode: bool = Field(default=False, alias="GROQ_EVALUATION_MODE")
+    groq_evaluation_request_budget: int = Field(default=6, alias="GROQ_EVALUATION_REQUEST_BUDGET")
+    groq_evaluation_token_budget: int = Field(default=12000, alias="GROQ_EVALUATION_TOKEN_BUDGET")
+    groq_evaluation_report_dir: Optional[str] = Field(default=None, alias="GROQ_EVALUATION_REPORT_DIR")
     gemini_api_key: Optional[str] = Field(default=None, alias="GEMINI_API_KEY")
     openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
     openai_base_url: str = Field(
         default="https://api.openai.com/v1",
         alias="OPENAI_BASE_URL",
+    )
+    ollama_base_url: str = Field(
+        default="http://127.0.0.1:11434",
+        alias="OLLAMA_BASE_URL",
     )
     llm_temperature: float = Field(default=0.3, alias="LLM_TEMPERATURE")
     llm_max_tokens: int = Field(default=600, alias="LLM_MAX_TOKENS")

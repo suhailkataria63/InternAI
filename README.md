@@ -116,7 +116,15 @@ MAX_PDF_PAGES=12
 MAX_TEXT_INPUT_CHARS=20000
 ```
 
-To prepare Groq later, set `LLM_PROVIDER=groq`, choose a Groq model in `LLM_MODEL`, and add `GROQ_API_KEY`. If the key is missing or the provider request fails, InternAI returns a mock fallback response instead of crashing.
+To use Groq for application answers and cover letters, set the following in `backend/.env`:
+
+```env
+LLM_PROVIDER=groq
+LLM_MODEL=openai/gpt-oss-120b
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+The key is read by the backend only. Keep it out of frontend environment files and source control. The writers request strict JSON Schema output and still validate factual support before using generated text. Provider failures return the existing deterministic writer fallback with provider and fallback metadata. Matching, skill gaps, and roadmap generation remain deterministic. Mock mode remains the default; local Ollama configuration is documented in `backend/.env.example`.
 
 To use Gemini's free-tier-friendly API later, update `.env` like this:
 

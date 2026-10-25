@@ -1,10 +1,13 @@
 
 import type { Metadata } from "next";
+import Script from "next/script";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { Toaster } from "@/components/control-ui/ui/toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "InternAI — AI Internship Copilot",
-  description: "Production-ready AI internship application analyzer with resume parsing, match scoring, roadmap generation, and application tracking.",
+  title: "InternAI — Your next application, with clarity",
+  description: "Understand your fit, build relevant skills, and create grounded application writing with InternAI.",
 };
 
 export default function RootLayout({
@@ -13,12 +16,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light" suppressHydrationWarning>
+      <head>
+        <Script id="internai-theme-init" strategy="beforeInteractive">
+          {`try { var savedTheme = localStorage.getItem("internai-theme"); var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches; document.documentElement.dataset.theme = savedTheme === "dark" || (savedTheme !== "light" && prefersDark) ? "dark" : "light"; } catch (_) {}`}
+        </Script>
+      </head>
       <body>
-        <div className="background-grid" />
-        <div className="background-glow glow-1" />
-        <div className="background-glow glow-2" />
-        {children}
+        <ThemeProvider>{children}<Toaster /></ThemeProvider>
       </body>
     </html>
   );

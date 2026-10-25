@@ -8,6 +8,7 @@ venv/
 *.db
 .env.local
 frontend/.env.local
+backend/.local-evaluation/
 
 # Node
 node_modules/

@@ -116,6 +116,10 @@ export type ApplicationAnswer = {
   tone?: string;
   word_count?: number;
   improvement_note?: string;
+  generation_source?: string;
+  llm_provider?: string;
+  used_fallback?: boolean;
+  fallback_reason?: string;
 };
 
 export type CoverLetterResult = {
@@ -125,6 +129,10 @@ export type CoverLetterResult = {
   key_points_used?: string[];
   tone?: string;
   word_count?: number;
+  generation_source?: string;
+  llm_provider?: string;
+  used_fallback?: boolean;
+  fallback_reason?: string;
 };
 
 export type AnalysisResponse = {

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   deleteApplication,
   listApplications,
   updateApplicationStatus,
 } from "../lib/api";
 import type { ApplicationListItem, ApplicationStatus } from "../lib/types";
+import { Skeleton } from "@/components/control-ui/ui/skeleton";
 
 const statuses: ApplicationStatus[] = [
   "Saved",
@@ -27,33 +28,47 @@ export default function ApplicationTracker({
 }: ApplicationTrackerProps) {
   const [applications, setApplications] = useState<ApplicationListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [mutatingId, setMutatingId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const loadRequestId = useRef(0);
 
-  const loadApplications = async () => {
+  const loadApplications = useCallback(async () => {
+    const requestId = loadRequestId.current + 1;
+    loadRequestId.current = requestId;
     setIsLoading(true);
     setError("");
     try {
       const rows = await listApplications();
+      if (requestId !== loadRequestId.current) {
+        return;
+      }
       setApplications(rows);
     } catch (caughtError) {
+      if (requestId !== loadRequestId.current) {
+        return;
+      }
       setError(
         caughtError instanceof Error
           ? caughtError.message
           : "Could not load saved applications.",
       );
     } finally {
-      setIsLoading(false);
+      if (requestId === loadRequestId.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadApplications();
-  }, [refreshKey]);
+  }, [loadApplications, refreshKey]);
 
   const changeStatus = async (id: number, status: ApplicationStatus) => {
+    if (mutatingId) return;
     setMessage("");
     setError("");
+    setMutatingId(id);
     try {
       await updateApplicationStatus(id, status);
       setMessage("Status updated.");
@@ -62,21 +77,29 @@ export default function ApplicationTracker({
       setError(
         caughtError instanceof Error ? caughtError.message : "Status update failed.",
       );
+    } finally {
+      setMutatingId(null);
     }
   };
 
   const removeApplication = async (id: number) => {
+    if (mutatingId) return;
     setMessage("");
     setError("");
+    setMutatingId(id);
     try {
       await deleteApplication(id);
       setMessage("Application deleted.");
       onDeleted?.(id);
-      await loadApplications();
+      if (!onDeleted) {
+        await loadApplications();
+      }
     } catch (caughtError) {
       setError(
         caughtError instanceof Error ? caughtError.message : "Delete failed.",
       );
+    } finally {
+      setMutatingId(null);
     }
   };
 
@@ -87,15 +110,20 @@ export default function ApplicationTracker({
           <h4>Saved applications</h4>
           <p>Update status or remove opportunities from your local tracker.</p>
         </div>
-        <button type="button" onClick={loadApplications} className="tracker-refresh">
-          Refresh
+        <button
+          type="button"
+          onClick={loadApplications}
+          className="tracker-refresh"
+          disabled={isLoading}
+        >
+          {isLoading ? "Refreshing…" : "Refresh"}
         </button>
       </div>
 
       {message ? <p className="state-message success">{message}</p> : null}
       {error ? <p className="state-message error">{error}</p> : null}
 
-      <div className="tracker-table-scroll">
+      <div className="tracker-table-scroll" aria-busy={isLoading}>
         <table className="tracker-table">
           <thead>
             <tr>
@@ -109,10 +137,21 @@ export default function ApplicationTracker({
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
+            {isLoading && applications.length === 0 ? (
+              <>
+                <tr className="tracker-sr-only-row"><td colSpan={7} role="status">Loading saved applications…</td></tr>
+                {[0, 1, 2].map((row) => (
+                  <tr key={`skeleton-${row}`} className="tracker-skeleton-row" aria-hidden="true">
+                    {statuses.slice(0, 2).map((_, cell) => <td key={cell}><Skeleton variant="shimmer" className="tracker-skeleton" /></td>)}
+                    {[0, 1, 2, 3, 4].map((cell) => <td key={cell}><Skeleton variant="shimmer" className="tracker-skeleton tracker-skeleton-short" /></td>)}
+                  </tr>
+                ))}
+              </>
+            ) : error && applications.length === 0 ? (
               <tr>
-                <td colSpan={7} className="tracker-empty">
-                  Loading saved applications...
+                <td colSpan={7} className="tracker-state-cell">
+                  <strong>Applications unavailable</strong>
+                  <span>Refresh to try loading your saved applications again.</span>
                 </td>
               </tr>
             ) : applications.length ? (
@@ -125,6 +164,9 @@ export default function ApplicationTracker({
                   <td>
                     <select
                       value={application.status}
+                      aria-label={`Status for ${application.company_name || "application"} — ${application.role_title || "role"}`}
+                      className={`tracker-status-select tracker-status-${application.status.toLowerCase()}`}
+                      disabled={mutatingId === application.id}
                       onChange={(event) =>
                         changeStatus(
                           application.id,
@@ -145,16 +187,18 @@ export default function ApplicationTracker({
                       type="button"
                       onClick={() => removeApplication(application.id)}
                       className="tracker-delete"
+                      disabled={mutatingId === application.id}
                     >
                       Delete
                     </button>
                   </td>
                 </tr>
               ))
-            ) : (
+            ) : isLoading ? null : (
               <tr>
                 <td colSpan={7} className="tracker-empty">
-                  No saved applications yet.
+                  <strong>No applications saved yet.</strong>
+                  <span>Your saved opportunities will appear here.</span>
                 </td>
               </tr>
             )}

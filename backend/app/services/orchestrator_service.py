@@ -1,9 +1,9 @@
-from app.agents.application_writer_agent import generate_application_answer
-from app.agents.cover_letter_agent import generate_cover_letter
+from time import perf_counter
+
 from app.agents.jd_analyzer import analyze_jd_text
 from app.agents.match_scorer import calculate_match_score
 from app.agents.resume_analyzer import analyze_resume_text
-from app.agents.skill_gap_agent import analyze_skill_gap, format_skill_display
+from app.agents.skill_gap_agent import generate_rule_based_skill_gap, format_skill_display
 
 
 class OrchestratorStepError(Exception):
@@ -27,63 +27,53 @@ def run_full_application_analysis(
     if not job_description or not job_description.strip():
         raise ValueError("job_description is required and cannot be empty.")
 
+    stage_timings_ms = {}
     resume_profile = _run_step(
         "Resume Analyzer Agent",
         analyze_resume_text,
         resume_text,
+        timings=stage_timings_ms,
+        timing_key="resume_analyzer",
     )
     job_profile = _run_step(
         "JD Analyzer Agent",
         analyze_jd_text,
         job_description,
+        timings=stage_timings_ms,
+        timing_key="jd_analyzer",
     )
     match_result = _run_step(
         "Match Scoring Agent",
         calculate_match_score,
         resume_profile,
         job_profile,
+        timings=stage_timings_ms,
+        timing_key="match_scorer",
     )
     skill_gap_result = _run_step(
-        "Skill Gap Agent",
-        analyze_skill_gap,
+        "Deterministic Skill Gap Planner",
+        generate_rule_based_skill_gap,
         resume_profile,
         job_profile,
         match_result,
+        timings=stage_timings_ms,
+        timing_key="skill_gap",
     )
-    application_answer = _run_step(
-        "Application Writer Agent",
-        generate_application_answer,
-        resume_profile,
-        job_profile,
-        match_result,
-        skill_gap_result,
-        application_question,
-        tone,
-        word_limit,
-    )
-    cover_letter = _run_step(
-        "Cover Letter Agent",
-        generate_cover_letter,
-        resume_profile,
-        job_profile,
-        match_result,
-        skill_gap_result,
-        tone,
-        cover_letter_length,
-    )
-
     return {
         "resume_profile": resume_profile,
         "job_profile": job_profile,
         "match_result": match_result,
         "skill_gap_result": skill_gap_result,
-        "application_answer": application_answer,
-        "cover_letter": cover_letter,
+        # Keep the existing response keys for older clients. Writing is now
+        # performed only by the dedicated endpoints after explicit selection.
+        "application_answer": {},
+        "cover_letter": {},
         "pipeline_summary": build_pipeline_summary(
             resume_profile,
             job_profile,
             match_result,
             skill_gap_result,
+            stage_timings_ms,
         ),
     }
 
@@ -93,6 +83,7 @@ def build_pipeline_summary(
     job_profile: dict,
     match_result: dict,
     skill_gap_result: dict,
+    stage_timings_ms: dict | None = None,
 ) -> dict:
     highest_priority_skills = [
         item.get("skill", "")
@@ -116,14 +107,20 @@ def build_pipeline_summary(
         "top_missing_skills": [format_skill_display(skill) for skill in match_result.get("missing_skills", [])[:5]],
         "highest_priority_skills": [format_skill_display(skill) for skill in highest_priority_skills[:5]],
         "recommended_next_step": _recommended_next_step(match_result, skill_gap_result),
+        "stage_timings_ms": stage_timings_ms or {},
     }
 
 
-def _run_step(step_name: str, function, *args, **kwargs):
+def _run_step(step_name: str, function, *args, timings: dict | None = None, timing_key: str | None = None, **kwargs):
+    start = perf_counter()
     try:
-        return function(*args, **kwargs)
+        result = function(*args, **kwargs)
     except Exception as exc:
         raise OrchestratorStepError(step_name, exc) from exc
+    finally:
+        if timings is not None and timing_key:
+            timings[timing_key] = round((perf_counter() - start) * 1000, 3)
+    return result
 
 
 def _recommended_next_step(match_result: dict, skill_gap_result: dict) -> str:
@@ -140,4 +137,4 @@ def _recommended_next_step(match_result: dict, skill_gap_result: dict) -> str:
         return "Start with the highest priority missing skills: " + ", ".join(format_skill_display(skill) for skill in high_priority_skills[:3]) + "."
     if missing_skills:
         return "Add clearer evidence for missing skills: " + ", ".join(format_skill_display(skill) for skill in missing_skills[:3]) + "."
-    return "Review the generated application answer and cover letter for company-specific details before submitting."
+    return "Create a cover letter or application answer in AI Studio when you are ready."

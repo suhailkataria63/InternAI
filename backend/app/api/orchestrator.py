@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/orchestrator", tags=["Orchestrator"])
 
 
 @router.post("/analyze-application", response_model=OrchestratorResponse)
-def analyze_application(request: OrchestratorRequest) -> OrchestratorResponse:
+def analyze_application(request: OrchestratorRequest) -> dict:
     try:
         result = run_full_application_analysis(
             resume_text=request.resume_text,
@@ -37,4 +37,4 @@ def analyze_application(request: OrchestratorRequest) -> OrchestratorResponse:
             },
         ) from exc
 
-    return OrchestratorResponse(**result)
+    return result

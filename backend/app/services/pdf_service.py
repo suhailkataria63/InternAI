@@ -1,5 +1,7 @@
 import fitz
 
+from app.utils import normalize_spaces
+
 
 def extract_text_from_pdf(pdf_bytes: bytes, max_pages: int | None = None) -> str:
     """Extract raw text from a PDF file represented as bytes."""
@@ -25,9 +27,14 @@ def extract_text_from_pdf(pdf_bytes: bytes, max_pages: int | None = None) -> str
     finally:
         document.close()
 
-    extracted_text = "\n".join(text_parts).strip()
+    extracted_text = clean_extracted_text("\n".join(text_parts))
     if not extracted_text:
         raise ValueError(
             "No readable text could be extracted from this PDF. Please paste the resume text manually."
         )
     return extracted_text
+
+
+def clean_extracted_text(text: str) -> str:
+    """Normalize PDF extraction artifacts while preserving resume line structure."""
+    return normalize_spaces(text, preserve_newlines=True)

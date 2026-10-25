@@ -23,3 +23,4 @@ class ApplicationWriterResponse(BaseModel):
     generation_source: Optional[str] = None
     llm_provider: Optional[str] = None
     used_fallback: Optional[bool] = None
+    fallback_reason: Optional[str] = None

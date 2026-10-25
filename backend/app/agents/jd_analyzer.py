@@ -1,4 +1,7 @@
 import re
+from functools import lru_cache
+
+from app.utils import normalize_spaces, unique_preserve_order
 
 
 JD_ANALYZER_PROMPT_TEMPLATE = """
@@ -176,6 +179,8 @@ def analyze_jd_text(jd_text: str) -> dict:
         "preferred_skills": extract_preferred_skills(cleaned_text, lines),
         "responsibilities": extract_responsibilities(cleaned_text, lines),
         "eligibility": extract_eligibility(cleaned_text, lines),
+        "experience_requirements": [],
+        "education_requirements": [],
         "stipend": extract_stipend(cleaned_text),
         "duration": extract_duration(cleaned_text),
         "location": extract_location(cleaned_text),
@@ -189,16 +194,16 @@ def analyze_jd_text(jd_text: str) -> dict:
         for skill in job_profile["preferred_skills"]
         if _normalize_skill(skill) not in required_normalized
     ]
+    job_profile["experience_requirements"] = extract_experience_requirements(job_profile)
+    job_profile["education_requirements"] = extract_education_requirements(job_profile)
     job_profile["keywords"] = extract_keywords(job_profile)
 
     return job_profile
 
 
 def clean_text(text: str) -> str:
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
+    text = str(text or "").replace("\r\n", "\n").replace("\r", "\n")
+    return normalize_spaces(text, preserve_newlines=True)
 
 
 def split_lines(text: str) -> list:
@@ -231,7 +236,7 @@ def extract_explicit_required_skills(lines: list[str]) -> list[str]:
     skill_lines = get_section_lines(
         lines,
         ["Skill(s) required", "Skills required", "Required skills", "Skills"],
-        ["Who can apply", "Other requirements", "Perks", "Additional information", "Number of openings", "About"],
+        ["Preferred skills", "Good to have", "Nice to have", "Who can apply", "Other requirements", "Perks", "Additional information", "Number of openings", "About"],
     )
     skills = []
     for line in skill_lines:
@@ -343,6 +348,9 @@ def extract_company_name(text: str, lines: list) -> str:
             company = clean_company_name(line[6:])
             if company and not _looks_like_role(company) and not _is_generic_about_heading(company):
                 return company
+    header_company = _company_from_header_lines(lines)
+    if header_company:
+        return header_company
     return ""
 
 
@@ -403,7 +411,12 @@ def extract_required_skills(text: str, lines: list) -> list:
             skill for skill in fallback_skills if _normalize_skill(skill) not in preferred_normalized
         ]
 
-    return deduplicate_preserve_order(explicit_required_skills + other_requirement_skills + required_skills)
+    preferred_normalized = {_normalize_skill(skill) for skill in preferred_skills}
+    return [
+        skill
+        for skill in deduplicate_preserve_order(explicit_required_skills + other_requirement_skills + required_skills)
+        if _normalize_skill(skill) not in preferred_normalized
+    ]
 
 
 def extract_preferred_skills(text: str, lines: list) -> list:
@@ -527,22 +540,26 @@ def extract_keywords(profile: dict) -> list:
     return deduplicate_preserve_order(_clean_items(keywords))[:30]
 
 
+def extract_experience_requirements(profile: dict) -> list:
+    items = []
+    for value in profile.get("responsibilities", []) + profile.get("eligibility", []):
+        lowered = str(value).lower()
+        if re.search(r"\b(experience|internship|worked|work experience|projects?|hands[- ]on|familiarity)\b", lowered):
+            items.append(value)
+    return deduplicate_preserve_order(_clean_items(items))[:8]
+
+
+def extract_education_requirements(profile: dict) -> list:
+    items = []
+    for value in profile.get("eligibility", []):
+        lowered = str(value).lower()
+        if re.search(r"\b(b\.?tech|btech|bachelor|degree|computer science|engineering|student|graduate|semester|year|diploma)\b", lowered):
+            items.append(value)
+    return deduplicate_preserve_order(_clean_items(items))[:8]
+
+
 def deduplicate_preserve_order(items: list) -> list:
-    seen = set()
-    unique_items = []
-
-    for item in items:
-        if item is None:
-            continue
-        value = str(item).strip()
-        if not value:
-            continue
-        key = value.lower()
-        if key not in seen:
-            seen.add(key)
-            unique_items.append(value)
-
-    return unique_items
+    return unique_preserve_order([item for item in items if item is not None])
 
 
 def extract_skills_from_other_requirements(lines: list[str]) -> list[str]:
@@ -682,11 +699,18 @@ def _contains_any(value: str, keywords: list) -> bool:
 
 
 def _skill_alias_found(lowered_text: str, alias: str) -> bool:
-    alias = alias.lower()
-    escaped = re.escape(alias)
-    if alias in {"c++", "c#", "next.js", "node.js"}:
-        return alias in lowered_text
-    return bool(re.search(rf"(?<![a-z0-9]){escaped}(?![a-z0-9])", lowered_text))
+    pattern = _skill_alias_pattern(alias)
+    if pattern is None:
+        return alias.lower() in lowered_text
+    return bool(pattern.search(lowered_text))
+
+
+@lru_cache(maxsize=None)
+def _skill_alias_pattern(alias: str):
+    normalized = alias.lower()
+    if normalized in {"c++", "c#", "next.js", "node.js", "express.js"}:
+        return None
+    return re.compile(rf"(?<![a-z0-9]){re.escape(normalized)}(?![a-z0-9])")
 
 
 def _normalize_skill(skill: str) -> str:
@@ -724,6 +748,85 @@ def clean_company_name(text: str) -> str:
     return company[:100].strip(" -•\t:,.")
 
 
+def _company_from_header_lines(lines: list[str]) -> str:
+    for index, line in enumerate(lines[:8]):
+        if not _looks_like_role(line):
+            continue
+        for candidate in lines[index + 1 : min(index + 5, len(lines))]:
+            company = clean_company_name(candidate)
+            if _looks_like_unlabeled_company(company):
+                return company
+            if _looks_like_location(company) or _is_jd_heading(company):
+                continue
+            if company:
+                break
+    return ""
+
+
+def _looks_like_unlabeled_company(value: str) -> bool:
+    company = clean_company_name(value)
+    lowered = company.lower()
+    if not company:
+        return False
+    if _looks_like_role(company) or _looks_like_location(company) or _is_jd_heading(company):
+        return False
+    if re.search(r"\b(?:remote|work from home|hybrid|onsite|on-site|stipend|salary|ctc|₹|rs\.?|inr|\d+\s*(?:lpa|k|months?|weeks?))\b", lowered):
+        return False
+    if "@" in company or "http" in lowered:
+        return False
+    words = company.split()
+    if not 1 <= len(words) <= 5:
+        return False
+    suffixes = (
+        "technologies",
+        "technology",
+        "labs",
+        "solutions",
+        "systems",
+        "software",
+        "pvt",
+        "private",
+        "limited",
+        "ltd",
+        "llp",
+        "inc",
+        "ai",
+    )
+    if any(word.lower().strip(".,") in suffixes for word in words):
+        return True
+    return all(word[:1].isupper() or word.isupper() for word in words)
+
+
+def _looks_like_location(value: str) -> bool:
+    lowered = value.lower().strip()
+    location_terms = (
+        "mohali",
+        "punjab",
+        "delhi",
+        "noida",
+        "gurgaon",
+        "gurugram",
+        "bangalore",
+        "bengaluru",
+        "mumbai",
+        "pune",
+        "hyderabad",
+        "chennai",
+        "kolkata",
+        "india",
+        "remote",
+        "work from home",
+        "onsite",
+        "on-site",
+        "hybrid",
+    )
+    return any(term in lowered for term in location_terms)
+
+
+def _is_jd_heading(value: str) -> bool:
+    return _heading_matches(value, STOP_SECTION_KEYWORDS) or _is_metadata_heading(value)
+
+
 def _is_generic_about_heading(value: str) -> bool:
     return value.strip().lower() in {
         "the internship",
@@ -757,6 +860,7 @@ def title_case_role(text: str) -> str:
 
 def _clean_role_title(value: str, full_text: str) -> str:
     cleaned = _clean_inline_value(value)
+    cleaned = re.split(r"\s+[–-]\s+", cleaned, maxsplit=1)[0]
     cleaned = re.split(
         r"\b(?:at|with|where|you will|who can apply|selected intern|for\s+\d+\s*(?:weeks?|months?|years?)|remote|work from home|required|preferred|responsibilities|perks|eligibility)\b",
         cleaned,

@@ -48,13 +48,18 @@ def analyze_skill_gap(resume_profile: dict, job_profile: dict, match_result: dic
 
     llm_service = LLMService()
     llm_status = llm_service.get_status()
-    if llm_status.get("provider") == "mock":
+    if llm_status.get("provider") in {"mock", "ollama", "groq"}:
+        fallback_reason = {
+            "mock": "provider_mock",
+            "ollama": "deterministic_for_ollama",
+            "groq": "deterministic_for_groq",
+        }[llm_status.get("provider")]
         return _with_generation_metadata(
             rule_based_result,
             source="rule_based",
             provider=llm_status.get("provider", "mock"),
             used_fallback=True,
-            fallback_reason="provider_mock",
+            fallback_reason=fallback_reason,
         )
 
     system_prompt, user_prompt = build_skill_gap_prompt(

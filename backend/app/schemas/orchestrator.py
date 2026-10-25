@@ -66,6 +66,7 @@ class PipelineSummary(BaseModel):
     top_missing_skills: list[str] = Field(default_factory=list)
     highest_priority_skills: list[str] = Field(default_factory=list)
     recommended_next_step: str = ""
+    stage_timings_ms: Dict[str, float] = Field(default_factory=dict)
 
 
 class OrchestratorResponse(BaseModel):
